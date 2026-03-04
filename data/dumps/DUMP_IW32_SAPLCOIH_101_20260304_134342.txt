@@ -1,0 +1,14 @@
+TCODE=IW32 PROGRAM=SAPLCOIH SCREEN=101
+TIMESTAMP=20260304_134342
+--------------------------------------------------------------------------------
+[STATUS_BAR]
+TYPE= | TEXT=
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+[RELEVANT_OBJECTS]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-AUFNR | TYPE=GuiLabel | NAME=CAUFVD-AUFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-AUFNR | TYPE=GuiCTextField | NAME=CAUFVD-AUFNR | TEXT= | TIP=
+--------------------------------------------------------------------------------
+[FULL_TREE]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-AUFNR | TYPE=GuiLabel | NAME=CAUFVD-AUFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-AUFNR | TYPE=GuiCTextField | NAME=CAUFVD-AUFNR | TEXT= | TIP=

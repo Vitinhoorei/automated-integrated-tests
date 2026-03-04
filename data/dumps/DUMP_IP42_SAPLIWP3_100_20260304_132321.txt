@@ -1,0 +1,22 @@
+TCODE=IP42 PROGRAM=SAPLIWP3 SCREEN=100
+TIMESTAMP=20260304_132321
+--------------------------------------------------------------------------------
+[STATUS_BAR]
+TYPE= | TEXT=
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+[RELEVANT_OBJECTS]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-WARPL | TYPE=GuiLabel | NAME=RMIPM-WARPL | TEXT=Plano manutenção | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtRMIPM-WARPL | TYPE=GuiTextField | NAME=RMIPM-WARPL | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-MPTYP | TYPE=GuiLabel | NAME=RMIPM-MPTYP | TEXT=Ctg.plano manut. | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/cmbRMIPM-MPTYP | TYPE=GuiComboBox | NAME=RMIPM-MPTYP | TEXT=                                                                                                                                                                                                                                                                | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-WSTRA | TYPE=GuiLabel | NAME=RMIPM-WSTRA | TEXT=Estratégia | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRMIPM-WSTRA | TYPE=GuiCTextField | NAME=RMIPM-WSTRA | TEXT=EF001 | TIP=
+--------------------------------------------------------------------------------
+[FULL_TREE]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-WARPL | TYPE=GuiLabel | NAME=RMIPM-WARPL | TEXT=Plano manutenção | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtRMIPM-WARPL | TYPE=GuiTextField | NAME=RMIPM-WARPL | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-MPTYP | TYPE=GuiLabel | NAME=RMIPM-MPTYP | TEXT=Ctg.plano manut. | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/cmbRMIPM-MPTYP | TYPE=GuiComboBox | NAME=RMIPM-MPTYP | TEXT=                                                                                                                                                                                                                                                                | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRMIPM-WSTRA | TYPE=GuiLabel | NAME=RMIPM-WSTRA | TEXT=Estratégia | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRMIPM-WSTRA | TYPE=GuiCTextField | NAME=RMIPM-WSTRA | TEXT=EF001 | TIP=

@@ -1,0 +1,21 @@
+IW21:
+  "SAPLIQS0|0100":
+    "Tipo de nota": "wnd[0]/usr/ctxtRIWO00-QMART"
+    "Nota": "wnd[0]/usr/ctxtRIWO00-QMNUM"
+    "Nº modelo nota": "wnd[0]/usr/ctxtRIWO00-QWRNUM"
+
+IW31:
+  "SAPLCOIH|0100":
+    "Tipo de ordem": "wnd[0]/usr/ctxtAUFPAR-PM_AUFART"
+    "Local de instalação": "wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR"
+
+IP41:
+  "SAPLIWP3|0100":
+    "Plano manutenção": "wnd[0]/usr/txtRMIPM-WARPL"
+    "Ctg.plano manut.": "wnd[0]/usr/cmbRMIPM-MPTYP"
+
+IP42:
+  "SAPLIWP3|0100":
+    "Plano manutenção": "wnd[0]/usr/txtRMIPM-WARPL"
+    "Ctg.plano manut.": "wnd[0]/usr/cmbRMIPM-MPTYP"
+    "Estratégia": "wnd[0]/usr/ctxtRMIPM-WSTRA"

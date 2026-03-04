@@ -1,0 +1,4 @@
+TCODE=IW32 PROGRAM=SAPLCOIH SCREEN=101
+--------------------------------------------------------------------------------
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-AUFNR | TYPE=GuiLabel | NAME=CAUFVD-AUFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-AUFNR | TYPE=GuiCTextField | NAME=CAUFVD-AUFNR | TEXT= | TIP=

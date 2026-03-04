@@ -1,0 +1,9 @@
+TCODE=IW21 PROGRAM=SAPLIQS0 SCREEN=100
+--------------------------------------------------------------------------------
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRIWO00-QMART | TYPE=GuiLabel | NAME=RIWO00-QMART | TEXT=Tipo de nota | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRIWO00-QMART | TYPE=GuiCTextField | NAME=RIWO00-QMART | TEXT=Z4 | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRIWO00-QMNUM | TYPE=GuiLabel | NAME=RIWO00-QMNUM | TEXT=Nota | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRIWO00-QMNUM | TYPE=GuiCTextField | NAME=RIWO00-QMNUM | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/box%#AUTOTEXT001 | TYPE=GuiBox | NAME=%#AUTOTEXT001 | TEXT=Modelo | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRIWO00-QWRNUM | TYPE=GuiLabel | NAME=RIWO00-QWRNUM | TEXT=Nº modelo nota | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRIWO00-QWRNUM | TYPE=GuiCTextField | NAME=RIWO00-QWRNUM | TEXT= | TIP=
