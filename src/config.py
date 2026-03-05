@@ -13,5 +13,5 @@ class AppConfig:
     Config do projeto.
     Você pode trocar paths sem mexer no código, usando .env.
     """
-    evidence_dir: str = os.getenv("EVIDENCE_DIR", "C:/Users/veleoterio/Downloads/testes-automação/data/evidence")
+    evidence_dir: str = os.getenv("EVIDENCE_DIR", "C:/Users/veleoterio/Downloads/testes-automação/evidence")
     output_dir: str = os.getenv("OUTPUT_DIR", "data/output")

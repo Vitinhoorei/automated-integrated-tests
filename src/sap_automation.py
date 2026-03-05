@@ -21,7 +21,7 @@ class SapResult:
 class SapAutomation:
     """
     Conecta a uma sessão SAP GUI já aberta e logada.
-    Executa transações, preenche campos e captura evidências.
+    Executa transações, preenche campos inteligentemente navegando por múltiplas telas.
     """
 
     def __init__(self, field_map_path: str = "configs/field_map.yaml"):
@@ -97,7 +97,7 @@ class SapAutomation:
                 except Exception:
                     pass
 
-            texts = []
+            texts =[]
             try:
                 for i in range(wnd1.Children.Count):
                     child = wnd1.Children(i)
@@ -250,46 +250,55 @@ class SapAutomation:
         tcode_maps = self.field_map.get((tcode or "").upper(), {})
         return tcode_maps.get(self._screen_key()) or tcode_maps.get("DEFAULT") or {}
 
-    def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> Optional[str]:
+    def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str]:
+        """
+        Tenta preencher na tela ATUAL o que for possível.
+        Retorna (dicionário com os campos que SOBRARAM, mensagem de erro se houver)
+        """
         self._ensure_session()
-
         if not params:
-            return None
+            return {}, ""
 
         mapping = self._mapping_for_current_screen(tcode)
+        
+        # Se a tela não tem mapping, apenas retornamos os params intocados para o loop apertar Enter e ir para a próxima
         if not mapping:
-            dump = dump_screen(self.session)
-            return f"Sem mapping para {tcode} | DUMP: {dump}"
+            return params, ""
 
         mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
-
-        not_mapped, not_found, filled, errors = [], [], [], {}
+        
+        remaining_params = {}
+        errors = {}
 
         for key, value in params.items():
             sap_id = mapping.get(key) or mapping_norm.get(self._norm_key(key))
-            if not sap_id:
-                not_mapped.append(key)
-                continue
-
-            try:
-                obj = self.session.findById(sap_id)
+            if sap_id:
                 try:
-                    obj.text = value
-                except Exception:
-                    obj.key = value
-                filled.append(key)
-            except Exception as e:
-                not_found.append(key)
-                errors[key] = str(e)
+                    obj = self.session.findById(sap_id)
+                    
+                    # Limpeza: Evita que o Excel envie números como float (Ex: "1.0" vira "1")
+                    val_str = str(value).strip()
+                    if val_str.endswith(".0"):
+                        val_str = val_str[:-2]
 
-        if not_mapped or not_found:
+                    # Preenchimento dinâmico conforme o tipo do campo no SAP
+                    if obj.Type == "GuiComboBox":
+                        obj.key = val_str
+                    elif obj.Type in ("GuiCheckBox", "GuiRadioButton"):
+                        obj.selected = (val_str.upper() in["X", "1", "TRUE", "SIM"])
+                    else:
+                        obj.text = val_str
+                        
+                except Exception as e:
+                    errors[key] = str(e)
+            else:
+                remaining_params[key] = value
+
+        if errors:
             dump = dump_screen(self.session)
-            return (
-                f"Preenchimento incompleto | "
-                f"OK={filled} | SEM_MAP={not_mapped} | NAO_ACHOU={not_found} | ERR={errors} | DUMP: {dump}"
-            )
+            return remaining_params, f"Erro ao preencher campo na tela atual: {errors} | DUMP: {dump}"
 
-        return None
+        return remaining_params, ""
 
     # EXECUÇÃO
     def open_tcode(self, tcode: str) -> None:
@@ -316,20 +325,59 @@ class SapAutomation:
             self._ensure_session()
             self.open_tcode(tcode)
 
-            warn = self.apply_parameters_dict(tcode, parameters or {})
-            if warn:
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", warn, ev)
+            params_to_fill = parameters.copy() if parameters else {}
+            popup_msgs =[]
+            max_telas = 10
+            tela_atual = 0
 
+            # LOOP INTELIGENTE: Navega pelas telas enquanto houver campos a preencher
+            while params_to_fill and tela_atual < max_telas:
+                tela_atual += 1
+                
+                # Tenta preencher o que conseguir na tela atual
+                params_to_fill, error_msg = self.apply_parameters_dict(tcode, params_to_fill)
+                
+                if error_msg:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", error_msg, ev)
+
+                # Fecha popups que possam pular na tela
+                while self._popup_exists():
+                    txt = self._popup_text()
+                    if txt:
+                        popup_msgs.append(txt)
+                    self._dismiss_popup()
+
+                # Verifica se deu erro vermelho no rodapé
+                sb_type = self._statusbar_type()
+                if sb_type in {"E", "A", "X"}:
+                    sb = self._statusbar_text()
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP", ev)
+
+                # Se AINDA SOBRARAM campos para preencher, aperta ENTER para ir para a próxima tela
+                if params_to_fill:
+                    self.session.findById("wnd[0]").sendVKey(0)
+                    time.sleep(0.7)
+
+            # Se rodou várias telas e ainda sobraram campos, avisa o erro
+            if params_to_fill:
+                campos_faltantes = list(params_to_fill.keys())
+                msg = f"Campos obrigatórios ausentes ou controles não encontrados no SAP: {campos_faltantes}"
+                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
+
+            # Tudo preenchido! Executa o Enter final (ou Salvar, dependendo da transação)
             self.execute_default()
 
-            popup_msgs = []
+            # Trata popups que aparecerem após o Enter final
             while self._popup_exists():
                 txt = self._popup_text()
                 if txt:
                     popup_msgs.append(txt)
                 self._dismiss_popup()
 
+            # Verifica o Status Final do rodapé
             sb = self._statusbar_text()
             sb_type = self._statusbar_type()
 

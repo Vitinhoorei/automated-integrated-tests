@@ -1,21 +1,30 @@
 IW21:
+  # --- TELA 1 (Inicial) ---
   "SAPLIQS0|0100":
-    "Tipo de nota": "wnd[0]/usr/ctxtRIWO00-QMART"
-    "Nota": "wnd[0]/usr/ctxtRIWO00-QMNUM"
-    "Nº modelo nota": "wnd[0]/usr/ctxtRIWO00-QWRNUM"
+    "Tipo de nota": 'wnd[0]/usr/ctxtRIWO00-QMART'
+    "Nota": 'wnd[0]/usr/ctxtRIWO00-QMNUM'
+    "Nº modelo nota": 'wnd[0]/usr/ctxtRIWO00-QWRNUM'
+
+  # --- TELA 2 (Principal) ---
+  "SAPLIQS0|7200":
+    "Texto Breve": 'wnd[0]/usr/subSCREEN_1:SAPLIQS0:1050/subNOTIF_TYPE:SAPLIQS0:1051/txtVIQMEL-QMTXT'
+    "Local de instalação": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_1:SAPLIQS0:7322/subOBJEKT:SAPLIWO1:0100/ctxtRIWO1-TPLNR'
+    "Notificador": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_3:SAPLIQS0:7326/ctxtVIQMEL-QMNAM'
+    "Prioridade": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_4:SAPLIQS0:7330/cmbVIQMEL-PRIOK'
+    "Ramal": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_5:SAPLIQS0:7900/ssubUSER0001:SAPLXQQM:0103/txtQMEL-ZZNR_RAMAL'
 
 IW31:
   "SAPLCOIH|0100":
-    "Tipo de ordem": "wnd[0]/usr/ctxtAUFPAR-PM_AUFART"
-    "Local de instalação": "wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR"
+    "Tipo de ordem": 'wnd[0]/usr/ctxtAUFPAR-PM_AUFART'
+    "Local de instalação": 'wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR'
 
 IP41:
   "SAPLIWP3|0100":
-    "Plano manutenção": "wnd[0]/usr/txtRMIPM-WARPL"
-    "Ctg.plano manut.": "wnd[0]/usr/cmbRMIPM-MPTYP"
+    "Plano manutenção": 'wnd[0]/usr/txtRMIPM-WARPL'
+    "Ctg.plano manut.": 'wnd[0]/usr/cmbRMIPM-MPTYP'
 
 IP42:
   "SAPLIWP3|0100":
-    "Plano manutenção": "wnd[0]/usr/txtRMIPM-WARPL"
-    "Ctg.plano manut.": "wnd[0]/usr/cmbRMIPM-MPTYP"
-    "Estratégia": "wnd[0]/usr/ctxtRMIPM-WSTRA"
+    "Plano manutenção": 'wnd[0]/usr/txtRMIPM-WARPL'
+    "Ctg.plano manut.": 'wnd[0]/usr/cmbRMIPM-MPTYP'
+    "Estratégia": 'wnd[0]/usr/ctxtRMIPM-WSTRA'
