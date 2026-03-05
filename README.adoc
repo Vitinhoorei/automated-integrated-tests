@@ -131,3 +131,4 @@ py src/main.py --file "c:\path\to\your\file.xlsx" --sheet "SheetName"
 
 == 🫱🏾‍🫲🏿 Integrante / Author
 * **Vitor Eduardo Eleoterio** - https://github.com/SGA-OKC
+* **Juscelino Rodrigues Brandão** - https://github.com/TOKYOSXR
