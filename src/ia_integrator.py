@@ -22,14 +22,9 @@ class AITestIntegrator:
     def __init__(self):
         self.api_url = getattr(config, "IA_BASE_URL", os.getenv("IA_BASE_URL", ""))
         self.api_key = getattr(config, "IA_API_KEY", os.getenv("IA_API_KEY", ""))
-
-        # Base viva de erros já vistos na execução atual
         self.error_memory: dict[str, dict] = {}
-
-        # IDs gerados em execuções integradas
         self.shared_context: dict[str, str] = {}
 
-    # IA – chamada controlada
     def _chamar_ia(self, prompt: str, json_mode: bool = False) -> str:
         payload = {
             "question": prompt,
@@ -62,7 +57,6 @@ class AITestIntegrator:
         except Exception as e:
             return "{}" if json_mode else f"Falha IA: {e}"
 
-    # Preparação de parâmetros (SEM alucinação e COM Teste Integrado)
     def preparar_parametros(
         self,
         tcode: str,
@@ -71,6 +65,18 @@ class AITestIntegrator:
     ) -> dict[str, str]:
         
         params_basicos = enrich_params(tcode, explanation, raw_params)
+        tcode_u = tcode.upper().strip()
+
+        if tcode_u == "IW31":
+            if "Nota" not in params_basicos and "Nota" in self.shared_context:
+                params_basicos["Nota"] = self.shared_context["Nota"]
+                
+            elif "Nota" not in params_basicos and "Aviso" in self.shared_context:
+                params_basicos["Nota"] = self.shared_context["Aviso"]
+
+        if tcode_u in ["IW32", "IW41"]:
+            if "Ordem" not in params_basicos and "Ordem" in self.shared_context:
+                params_basicos["Ordem"] = self.shared_context["Ordem"]
 
         prompt = f"""
                     Você é um especialista SAP PM.
@@ -94,7 +100,7 @@ class AITestIntegrator:
             data = json.loads(resposta)
             return {k: str(v) for k, v in data.items() if isinstance(v, (str, int))}
         except Exception:
-            return params_basicos or {} # Fallback seguro
+            return params_basicos or {} 
 
     # Captura de IDs gerados (execuções integradas)
     def extrair_id_integrado(self, tcode: str, status_message: str) -> None:
@@ -118,7 +124,6 @@ class AITestIntegrator:
         except Exception:
             pass
 
-    # Análise de erro SAP (núcleo do seu projeto)
     def analisar_erro_sap(
         self,
         tcode: str,
@@ -138,7 +143,6 @@ class AITestIntegrator:
 
         normalized = self._normalize_error(tcode, status_message)
 
-        # 1️⃣ Erro já conhecido
         if normalized in self.error_memory:
             prev = self.error_memory[normalized]
             return {
@@ -148,7 +152,6 @@ class AITestIntegrator:
                 "confianca": 90
             }
 
-        # 2️⃣ Erro novo → análise profunda
         dump_text = self._read_dump(dump_path)
 
         prompt = f"""
@@ -179,8 +182,6 @@ class AITestIntegrator:
                 "causa_raiz": "Erro não identificado",
                 "sugestao_correcao": "Verificar mensagem SAP e evidência."
             }
-
-        # 3️⃣ Armazena para próximas linhas
         self.error_memory[normalized] = data
 
         return {

@@ -17,18 +17,16 @@ class SapResult:
     message: str
     evidence_path: str = ""
 
-# CLASSE PRINCIPAL
 class SapAutomation:
     """
     Conecta a uma sessão SAP GUI já aberta e logada.
-    Executa transações, preenche campos e captura evidências.
+    Executa transações, preenche campos inteligentemente navegando por múltiplas telas.
     """
 
     def __init__(self, field_map_path: str = "configs/field_map.yaml"):
         self.session = None
         self.field_map = self._load_field_map(field_map_path)
 
-    # CONEXÃO / SETUP
     def connect_existing_session(self) -> None:
         sap_gui_auto = win32com.client.GetObject("SAPGUI")
         application = sap_gui_auto.GetScriptingEngine
@@ -39,7 +37,6 @@ class SapAutomation:
         if self.session is None:
             self.connect_existing_session()
 
-    # FIELD MAP
     def _load_field_map(self, path: str) -> dict:
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -48,7 +45,6 @@ class SapAutomation:
         except FileNotFoundError:
             return {}
 
-    # NORMALIZAÇÃO / CONTEXTO
     @staticmethod
     def _norm_key(text: str) -> str:
         text = (text or "").strip().lower()
@@ -66,7 +62,6 @@ class SapAutomation:
         except Exception:
             return "UNKNOWN|UNKNOWN"
 
-    # STATUS BAR
     def _statusbar_text(self) -> str:
         try:
             return self.session.findById("wnd[0]/sbar").Text or ""
@@ -79,7 +74,6 @@ class SapAutomation:
         except Exception:
             return ""
 
-    # POPUPS
     def _popup_exists(self) -> bool:
         try:
             self.session.findById("wnd[1]")
@@ -97,7 +91,7 @@ class SapAutomation:
                 except Exception:
                     pass
 
-            texts = []
+            texts =[]
             try:
                 for i in range(wnd1.Children.Count):
                     child = wnd1.Children(i)
@@ -112,28 +106,32 @@ class SapAutomation:
             return ""
 
     def _dismiss_popup(self) -> None:
-        for _ in range(4):
+        """Tenta fechar o popup de forma inteligente clicando em Sim ou Continuar."""
+        try:
+            wnd1 = self.session.findById("wnd[1]")
+        except Exception:
+            return
+
+        botoes_confirmacao = [
+            "tbar[0]/btn[0]",        
+            "usr/btnBUTTON_1",       
+            "tbar[0]/btn[11]",       
+        ]
+
+        for btn in botoes_confirmacao:
             try:
-                wnd1 = self.session.findById("wnd[1]")
-            except Exception:
+                wnd1.findById(btn).press()
+                time.sleep(0.4)
                 return
-
-            try:
-                wnd1.sendVKey(0)
-                time.sleep(0.2)
-                continue
             except Exception:
-                pass
+                continue
 
-            for btn in ("tbar[0]/btn[0]", "tbar[0]/btn[12]"):
-                try:
-                    wnd1.findById(btn).press()
-                    time.sleep(0.2)
-                    return
-                except Exception:
-                    continue
+        try:
+            wnd1.sendVKey(0)
+            time.sleep(0.4)
+        except Exception:
+            pass
 
-    # CAPTURA DE EVIDÊNCIAS
     def _hardcopy_wnd0(self, out_path: str) -> str:
         try:
             target = Path(out_path)
@@ -245,51 +243,59 @@ class SapAutomation:
     def _capture_success_evidence(self, out_path: str) -> str:
         return self._hardcopy_wnd0(out_path) if out_path else ""
 
-    # MAPPING / PARÂMETROS
-    def _mapping_for_current_screen(self, tcode: str) -> dict:
-        tcode_maps = self.field_map.get((tcode or "").upper(), {})
-        return tcode_maps.get(self._screen_key()) or tcode_maps.get("DEFAULT") or {}
-
-    def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> Optional[str]:
+    def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str]:
+        """
+        Tenta preencher na tela ATUAL. Se o campo estiver em outra tela, guarda para a próxima!
+        """
         self._ensure_session()
-
         if not params:
-            return None
+            return {}, ""
 
-        mapping = self._mapping_for_current_screen(tcode)
-        if not mapping:
-            dump = dump_screen(self.session)
-            return f"Sem mapping para {tcode} | DUMP: {dump}"
+        tcode_maps = self.field_map.get((tcode or "").upper(), {})
+        full_mapping = {}
+        for screen_key, fields in tcode_maps.items():
+            if isinstance(fields, dict):
+                full_mapping.update(fields)
 
-        mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
-
-        not_mapped, not_found, filled, errors = [], [], [], {}
+        mapping_norm = {self._norm_key(k): v for k, v in full_mapping.items()}
+        
+        remaining_params = {}
 
         for key, value in params.items():
-            sap_id = mapping.get(key) or mapping_norm.get(self._norm_key(key))
-            if not sap_id:
-                not_mapped.append(key)
+            if value is None or str(value).strip() == "":
                 continue
 
-            try:
-                obj = self.session.findById(sap_id)
+            sap_id = full_mapping.get(key) or mapping_norm.get(self._norm_key(key))
+            
+            if sap_id:
                 try:
-                    obj.text = value
+                    obj = self.session.findById(sap_id)
+                    
+                    val_str = str(value).strip()
+                    if val_str.endswith(".0"):
+                        val_str = val_str[:-2]
+
+                    obj_type = ""
+                    try:
+                        obj_type = str(getattr(obj, "Type", ""))
+                    except Exception:
+                        pass
+
+                    if obj_type == "GuiComboBox":
+                        obj.key = val_str
+                    elif obj_type in ("GuiCheckBox", "GuiRadioButton"):
+                        obj.selected = (val_str.upper() in["X", "1", "TRUE", "SIM", "S", "Y", "YES"])
+                    else:
+                        try:
+                            obj.text = val_str
+                        except Exception:
+                            obj.key = val_str
                 except Exception:
-                    obj.key = value
-                filled.append(key)
-            except Exception as e:
-                not_found.append(key)
-                errors[key] = str(e)
+                    remaining_params[key] = value
+            else:
+                remaining_params[key] = value
 
-        if not_mapped or not_found:
-            dump = dump_screen(self.session)
-            return (
-                f"Preenchimento incompleto | "
-                f"OK={filled} | SEM_MAP={not_mapped} | NAO_ACHOU={not_found} | ERR={errors} | DUMP: {dump}"
-            )
-
-        return None
+        return remaining_params, ""
 
     # EXECUÇÃO
     def open_tcode(self, tcode: str) -> None:
@@ -315,27 +321,113 @@ class SapAutomation:
         try:
             self._ensure_session()
             self.open_tcode(tcode)
+            params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
+            popup_msgs =[]
+            max_telas = 10
+            tela_atual = 0
 
-            warn = self.apply_parameters_dict(tcode, parameters or {})
-            if warn:
+            # LOOP INTELIGENTE: Navega pelas telas enquanto houver campos a preencher
+            while params_to_fill and tela_atual < max_telas:
+                tela_atual += 1
+                
+                params_to_fill, error_msg = self.apply_parameters_dict(tcode, params_to_fill)
+                
+                if error_msg:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", error_msg, ev)
+
+                tentativas_popup = 0
+                while self._popup_exists() and tentativas_popup < 5:
+                    txt = self._popup_text()
+                    if txt:
+                        popup_msgs.append(txt)
+                    self._dismiss_popup()
+                    tentativas_popup += 1
+
+                sb_type = self._statusbar_type()
+                if sb_type in {"E", "A", "X"}:
+                    sb = self._statusbar_text()
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP", ev)
+
+                if params_to_fill:
+                    self.session.findById("wnd[0]").sendVKey(0)
+                    time.sleep(0.7)
+
+            if params_to_fill:
+                campos_faltantes = list(params_to_fill.keys())
+                msg = f"Campos obrigatórios ausentes ou não encontrados no SAP: {campos_faltantes}"
                 ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", warn, ev)
+                return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
 
             self.execute_default()
-
-            popup_msgs = []
-            while self._popup_exists():
+            time.sleep(1.5)
+            
+            tentativas_popup = 0
+            while self._popup_exists() and tentativas_popup < 5:
                 txt = self._popup_text()
                 if txt:
                     popup_msgs.append(txt)
                 self._dismiss_popup()
+                tentativas_popup += 1
+                time.sleep(0.5)
 
+            tentativas_limpeza = 0
+            while self._statusbar_type() in {"W", "I", "S"} and tentativas_limpeza < 3:
+                try:
+                    self.session.findById("wnd[0]").sendVKey(0) 
+                    time.sleep(0.7)
+                except Exception:
+                    pass
+                tentativas_limpeza += 1
+
+            salvou = False
+            botoes_salvar =[
+                "wnd[0]/tbar[0]/btn[11]",
+                "wnd[0]/tbar[1]/btn[11]"
+            ]
+
+            for tentativa in range(3): 
+                try:
+                    clicou = False
+                    for btn in botoes_salvar:
+                        try:
+                            self.session.findById(btn).press()
+                            clicou = True
+                            break
+                        except Exception:
+                            continue
+                    
+                    if not clicou:
+                        self.session.findById("wnd[0]").sendVKey(11)
+                    
+                    time.sleep(1.5)
+
+                    teve_popup_no_save = False
+                    while self._popup_exists():
+                        txt = self._popup_text()
+                        if txt:
+                            popup_msgs.append(txt)
+                        self._dismiss_popup()
+                        teve_popup_no_save = True
+                        time.sleep(0.5)
+
+                    if teve_popup_no_save:
+                        continue
+
+                    salvou = True
+                    break
+
+                except Exception:
+                    time.sleep(1.0)
+
+            time.sleep(1.0)
             sb = self._statusbar_text()
             sb_type = self._statusbar_type()
 
             if sb_type in {"E", "A", "X"}:
                 ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP", ev)
+                return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao salvar", ev)
 
             ev = self._capture_success_evidence(evidence_path)
             msg = sb or "Executado com sucesso"

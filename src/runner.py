@@ -59,51 +59,61 @@ def run_excel_tests(
 
     # --- Execução linha a linha ---
     for item in rows:
-        fname = evidence_filename(
-            exec_id,
-            item.sheet_name,
-            item.row_index,
-            item.tcode,
-            "RUN",
-        )
-        evidence_path = str(Path(cfg.evidence_dir) / fname)
-
-        smart_params = ai.preparar_parametros(
-            item.tcode,
-            item.explanation,
-            item.parameter,
-        )
-        
-        result = sap.run_tcode(
-            item.tcode,
-            smart_params,
-            item.explanation,
-            evidence_path=evidence_path,
-        )
-
-        if result.status == "PASS":
-            ai.extrair_id_integrado(item.tcode, result.message)
-
-            write_status_with_fix_details(
-                xlsx_path=work_xlsx,
-                sheet_name=item.sheet_name,
-                row_index=item.row_index,
-                status="PASS",
-                source=result.source,
-                message=result.message,
-                suggested_fix="",
-                fix_confidence=100,
-                fix_justification="Execução concluída sem erros.",
-                evidence_path=result.evidence_path,
+            fname = evidence_filename(
+                exec_id,
+                item.sheet_name,
+                item.row_index,
+                item.tcode,
+                "RUN",
+            )
+            evidence_path = str(Path(cfg.evidence_dir) / fname)
+            smart_params = ai.preparar_parametros(
+                item.tcode,
+                item.explanation,
+                item.parameter,
+            )
+            
+            result = sap.run_tcode(
+                item.tcode,
+                smart_params,
+                item.explanation,
+                evidence_path=evidence_path,
             )
 
-            print(
-                f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} -> PASS | {result.message}"
-            )
+            if result.status == "PASS":
+                ai.extrair_id_integrado(item.tcode, result.message)
 
-        else:
-            dump_path = ""
+                msg_lower = result.message.lower()
+                import re
+                if "nota" in msg_lower or "aviso" in msg_lower:
+                    match = re.search(r"(?:nota|aviso)\s+(\d+)", msg_lower)
+                    if match:
+                        ai.shared_context["Nota"] = match.group(1)
+                elif "ordem" in msg_lower:
+                    match = re.search(r"ordem\s+(\d+)", msg_lower)
+                    if match:
+                        ai.shared_context["Ordem"] = match.group(1)
+
+                write_status_with_fix_details(
+                    xlsx_path=work_xlsx,
+                    sheet_name=item.sheet_name,
+                    row_index=item.row_index,
+                    status="PASS",
+                    source=result.source,
+                    message=result.message,
+                    suggested_fix="",
+                    fix_confidence=100,
+                    fix_justification="Execução concluída sem erros.",
+                    evidence_path=result.evidence_path,
+                )
+
+                print(
+                    f"[{item.sheet_name} r{item.row_index}] "
+                    f"{item.tcode} -> PASS | {result.message}"
+                )
+
+            else:
+                dump_path = ""
             if sap.session:
                 try:
                     dump_path = dump_screen(

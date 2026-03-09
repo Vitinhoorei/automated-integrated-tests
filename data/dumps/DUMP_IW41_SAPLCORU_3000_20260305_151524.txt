@@ -1,0 +1,46 @@
+TCODE=IW41 PROGRAM=SAPLCORU SCREEN=3000
+TIMESTAMP=20260305_151524
+--------------------------------------------------------------------------------
+[STATUS_BAR]
+TYPE= | TEXT=
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+[RELEVANT_OBJECTS]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-RUECK | TYPE=GuiLabel | NAME=CORUF-RUECK | TEXT=Confirmação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-RUECK | TYPE=GuiTextField | NAME=CORUF-RUECK | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-AUFNR | TYPE=GuiLabel | NAME=CORUF-AUFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-AUFNR | TYPE=GuiCTextField | NAME=CORUF-AUFNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-VORNR | TYPE=GuiLabel | NAME=CORUF-VORNR | TEXT=Operação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-VORNR | TYPE=GuiTextField | NAME=CORUF-VORNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-UVORN | TYPE=GuiLabel | NAME=CORUF-UVORN | TEXT=Suboperação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-UVORN | TYPE=GuiTextField | NAME=CORUF-UVORN | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-TPLNR | TYPE=GuiLabel | NAME=CORUF-TPLNR | TEXT=Loc.instalação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-TPLNR | TYPE=GuiCTextField | NAME=CORUF-TPLNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-EQUNR | TYPE=GuiLabel | NAME=CORUF-EQUNR | TEXT=Equipamento | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-EQUNR | TYPE=GuiCTextField | NAME=CORUF-EQUNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-KAPAR | TYPE=GuiLabel | NAME=CORUF-KAPAR | TEXT=Tipo capacidade | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-KAPAR | TYPE=GuiCTextField | NAME=CORUF-KAPAR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-SPLIT | TYPE=GuiLabel | NAME=CORUF-SPLIT | TEXT=Nº partição | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-SPLIT | TYPE=GuiTextField | NAME=CORUF-SPLIT | TEXT= | TIP=
+--------------------------------------------------------------------------------
+[FULL_TREE]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/boxTEXT_CONFIRMATIONNUMBER | TYPE=GuiBox | NAME=TEXT_CONFIRMATIONNUMBER | TEXT=Nº de confirmação da operação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-RUECK | TYPE=GuiLabel | NAME=CORUF-RUECK | TEXT=Confirmação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-RUECK | TYPE=GuiTextField | NAME=CORUF-RUECK | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/boxTEXT_ORDER | TYPE=GuiBox | NAME=TEXT_ORDER | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-AUFNR | TYPE=GuiLabel | NAME=CORUF-AUFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-AUFNR | TYPE=GuiCTextField | NAME=CORUF-AUFNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-VORNR | TYPE=GuiLabel | NAME=CORUF-VORNR | TEXT=Operação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-VORNR | TYPE=GuiTextField | NAME=CORUF-VORNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-UVORN | TYPE=GuiLabel | NAME=CORUF-UVORN | TEXT=Suboperação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-UVORN | TYPE=GuiTextField | NAME=CORUF-UVORN | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/boxTEXT_STANDINGORDER | TYPE=GuiBox | NAME=TEXT_STANDINGORDER | TEXT=Ordem permanente para | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-TPLNR | TYPE=GuiLabel | NAME=CORUF-TPLNR | TEXT=Loc.instalação | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-TPLNR | TYPE=GuiCTextField | NAME=CORUF-TPLNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-EQUNR | TYPE=GuiLabel | NAME=CORUF-EQUNR | TEXT=Equipamento | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-EQUNR | TYPE=GuiCTextField | NAME=CORUF-EQUNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/boxTEXT_CONFIRMATIONCAPA | TYPE=GuiBox | NAME=TEXT_CONFIRMATIONCAPA | TEXT=Capacidade individ. | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-KAPAR | TYPE=GuiLabel | NAME=CORUF-KAPAR | TEXT=Tipo capacidade | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCORUF-KAPAR | TYPE=GuiCTextField | NAME=CORUF-KAPAR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCORUF-SPLIT | TYPE=GuiLabel | NAME=CORUF-SPLIT | TEXT=Nº partição | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/txtCORUF-SPLIT | TYPE=GuiTextField | NAME=CORUF-SPLIT | TEXT= | TIP=
