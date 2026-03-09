@@ -14,9 +14,21 @@ IW21:
     "Ramal": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_5:SAPLIQS0:7900/ssubUSER0001:SAPLXQQM:0103/txtQMEL-ZZNR_RAMAL'
 
 IW31:
+  # --- TELA 1 (Inicial) ---
   "SAPLCOIH|0100":
     "Tipo de ordem": 'wnd[0]/usr/ctxtAUFPAR-PM_AUFART'
+    "Nota": 'wnd[0]/usr/ctxtAUFPAR-QMNUM'
     "Local de instalação": 'wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR'
+    "Nº equipamento": 'wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-EQUNR'
+
+  # --- TELA 2 (Aba Operações) ---
+  "SAPLCOIH|3000":
+    "Trabalho": 'wnd[0]/usr/subSUB_ALL:SAPLCOIH:3001/ssubSUB_LEVEL:SAPLCOIH:1100/tabsTS_1100/tabpVG/ssubSUB_AUFTRAG:SAPLCOVG:3010/tblSAPLCOVGTCTRL_3010/txtAFVGD-ARBEI[0,0]'
+    "Nº colaboradores": 'wnd[0]/usr/subSUB_ALL:SAPLCOIH:3001/ssubSUB_LEVEL:SAPLCOIH:1100/tabsTS_1100/tabpVG/ssubSUB_AUFTRAG:SAPLCOVG:3010/tblSAPLCOVGTCTRL_3010/txtAFVGD-ANZMA[0,0]'
+
+IW32:
+  "SAPLCOIH|0100":
+    "Ordem": 'wnd[0]/usr/ctxtCAUFVD-AUFNR'
 
 IP41:
   "SAPLIWP3|0100":

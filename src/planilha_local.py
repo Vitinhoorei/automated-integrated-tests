@@ -11,7 +11,7 @@ class SheetRow:
     sheet_name: str
     row_index: int
     scenario: str
-    tcode: str
+    tcode: str  
     explanation: str
     parameter: str
 

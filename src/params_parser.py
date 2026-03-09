@@ -1,27 +1,51 @@
 from __future__ import annotations
+import unicodedata
 
 PARAM_ALIASES = {
     "LI": "Local de instalação",
     "LOCAL INSTALAÇÃO": "Local de instalação",
     "LOCAL DE INSTALAÇÃO": "Local de instalação",
 
-    "GRUPO PLANEJAMENTO": "Grupo Planejamento",
-    "CAMPO ORDENAÇÃO": "Campo Ordenação",
+    "Nº EQUIPAMENTO": "Nº equipamento",
+    "EQUIPAMENTO": "Nº equipamento",
+    "EQUIPAM": "Nº equipamento",
 
-    "TEXTO BREVE": "Texto Breve",
-    "NOTIFICADOR": "Notificador",
     "PRIORIDADE": "Prioridade",
-    "RAMAL": "Ramal",
+
+    "TRABALHO": "Trabalho",
+    "TRAB": "Trabalho",
+
+    "Nº COLABORADORES": "Nº colaboradores",
+    "NUMERO COLABORADORES": "Nº colaboradores",
+    "NUM COLABORADORES": "Nº colaboradores",
+    "N COLABORADORES": "Nº colaboradores",
+    "N COLAB": "Nº colaboradores",
+    
+    "IMPRIMIR": "Imprimir",
+
+    "TIPOATVMNT": "Tipo de atividade de manutenção",
+    "TIPO ATVMNT": "Tipo de atividade de manutenção",
+    "TIPO ATIVIDADE MANUTENÇÃO": "Tipo de atividade de manutenção",
 }
+
+def remove_acento(txt: str) -> str:
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', txt)
+        if unicodedata.category(c) != 'Mn'
+    )
 
 def normalize_key(key: str) -> str:
     """
     Normaliza chave do Excel para o nome esperado no field_map.yaml
     """
     k = key.strip().upper()
-
     if k in PARAM_ALIASES:
         return PARAM_ALIASES[k]
+    
+    k_sem_acento = remove_acento(k)
+
+    if k_sem_acento in PARAM_ALIASES:
+        return PARAM_ALIASES[k_sem_acento]
     return key.strip()
 
 def parse_parameters(raw: str) -> dict[str, str]:
