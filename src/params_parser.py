@@ -9,6 +9,7 @@ PARAM_ALIASES = {
     "Nº EQUIPAMENTO": "Nº equipamento",
     "EQUIPAMENTO": "Nº equipamento",
     "EQUIPAM": "Nº equipamento",
+    "N EQUIPAMENTO": "Nº equipamento",
 
     "PRIORIDADE": "Prioridade",
 
@@ -26,6 +27,11 @@ PARAM_ALIASES = {
     "TIPOATVMNT": "Tipo de atividade de manutenção",
     "TIPO ATVMNT": "Tipo de atividade de manutenção",
     "TIPO ATIVIDADE MANUTENÇÃO": "Tipo de atividade de manutenção",
+    
+    "RAMAL": "Ramal",
+    "CRIAR NOTA": "Criar Nota",
+    "PRIORIDADE DA NOTA": "Prioridade da Nota",
+    "NOTIFICADOR": "Notificador",
 }
 
 def remove_acento(txt: str) -> str:

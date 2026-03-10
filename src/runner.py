@@ -40,14 +40,13 @@ def run_excel_tests(
 
     work_xlsx = _copy_to_output(xlsx_path, cfg.output_dir) if make_copy else xlsx_path
 
-    # --- Resolve abas alvo ---
     raw_sheet = (sheet_name or "").strip()
     if not raw_sheet or raw_sheet.upper() == "ALL":
         target_sheets = list_sheet_names(work_xlsx)
     else:
-        target_sheets = [s.strip() for s in raw_sheet.split(",") if s.strip()]
+        target_sheets =[s.strip() for s in raw_sheet.split(",") if s.strip()]
 
-    rows = []
+    rows =[]
     processed_sheets = set()
 
     for sname in target_sheets:
@@ -57,63 +56,63 @@ def run_excel_tests(
         except ValueError as e:
             print(f"[SKIP] Aba '{sname}' ignorada: {e}")
 
-    # --- Execução linha a linha ---
     for item in rows:
-            fname = evidence_filename(
-                exec_id,
-                item.sheet_name,
-                item.row_index,
-                item.tcode,
-                "RUN",
+        fname = evidence_filename(
+            exec_id,
+            item.sheet_name,
+            item.row_index,
+            item.tcode,
+            "RUN",
+        )
+        evidence_path = str(Path(cfg.evidence_dir) / fname)
+        
+        smart_params = ai.preparar_parametros(
+            item.tcode,
+            item.explanation,
+            item.parameter,
+        )
+        
+        result = sap.run_tcode(
+            item.tcode,
+            smart_params,
+            item.explanation,
+            evidence_path=evidence_path,
+        )
+
+        if result.status == "PASS":
+            ai.extrair_id_integrado(item.tcode, result.message)
+
+            msg_lower = result.message.lower()
+            import re
+            if "nota" in msg_lower or "aviso" in msg_lower:
+                match = re.search(r"(?:nota|aviso)\s+(\d+)", msg_lower)
+                if match:
+                    ai.shared_context["Nota"] = match.group(1)
+            elif "ordem" in msg_lower:
+                match = re.search(r"ordem\s+(\d+)", msg_lower)
+                if match:
+                    ai.shared_context["Ordem"] = match.group(1)
+
+            write_status_with_fix_details(
+                xlsx_path=work_xlsx,
+                sheet_name=item.sheet_name,
+                row_index=item.row_index,
+                status="PASS",
+                source=result.source,
+                message=result.message,
+                suggested_fix="",
+                fix_confidence=100,
+                fix_justification="Execução concluída sem erros.",
+                evidence_path=result.evidence_path,
             )
-            evidence_path = str(Path(cfg.evidence_dir) / fname)
-            smart_params = ai.preparar_parametros(
-                item.tcode,
-                item.explanation,
-                item.parameter,
-            )
-            
-            result = sap.run_tcode(
-                item.tcode,
-                smart_params,
-                item.explanation,
-                evidence_path=evidence_path,
+
+            print(
+                f"[{item.sheet_name} r{item.row_index}] "
+                f"{item.tcode} -> PASS | {result.message}"
             )
 
-            if result.status == "PASS":
-                ai.extrair_id_integrado(item.tcode, result.message)
-
-                msg_lower = result.message.lower()
-                import re
-                if "nota" in msg_lower or "aviso" in msg_lower:
-                    match = re.search(r"(?:nota|aviso)\s+(\d+)", msg_lower)
-                    if match:
-                        ai.shared_context["Nota"] = match.group(1)
-                elif "ordem" in msg_lower:
-                    match = re.search(r"ordem\s+(\d+)", msg_lower)
-                    if match:
-                        ai.shared_context["Ordem"] = match.group(1)
-
-                write_status_with_fix_details(
-                    xlsx_path=work_xlsx,
-                    sheet_name=item.sheet_name,
-                    row_index=item.row_index,
-                    status="PASS",
-                    source=result.source,
-                    message=result.message,
-                    suggested_fix="",
-                    fix_confidence=100,
-                    fix_justification="Execução concluída sem erros.",
-                    evidence_path=result.evidence_path,
-                )
-
-                print(
-                    f"[{item.sheet_name} r{item.row_index}] "
-                    f"{item.tcode} -> PASS | {result.message}"
-                )
-
-            else:
-                dump_path = ""
+        else:
+            dump_path = ""
             if sap.session:
                 try:
                     dump_path = dump_screen(
@@ -153,7 +152,6 @@ def run_excel_tests(
                 f"Sugestão: {sugestao} | Confiança: {confianca}"
             )
 
-            # Reset seguro do SAP
             if sap.session:
                 try:
                     sap.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
@@ -161,7 +159,6 @@ def run_excel_tests(
                 except Exception:
                     pass
 
-    # --- Formatação final ---
     for sname in processed_sheets:
         try:
             format_output_sheet(work_xlsx, sname)

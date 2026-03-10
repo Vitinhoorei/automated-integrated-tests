@@ -70,7 +70,6 @@ class AITestIntegrator:
         if tcode_u == "IW31":
             if "Nota" not in params_basicos and "Nota" in self.shared_context:
                 params_basicos["Nota"] = self.shared_context["Nota"]
-                
             elif "Nota" not in params_basicos and "Aviso" in self.shared_context:
                 params_basicos["Nota"] = self.shared_context["Aviso"]
 
@@ -78,31 +77,8 @@ class AITestIntegrator:
             if "Ordem" not in params_basicos and "Ordem" in self.shared_context:
                 params_basicos["Ordem"] = self.shared_context["Ordem"]
 
-        prompt = f"""
-                    Você é um especialista SAP PM.
-                    Sua tarefa é mesclar os parâmetros básicos já encontrados com o CONTEXTO de testes integrados.
+        return params_basicos
 
-                    TCODE: {tcode}
-                    Descrição: {explanation}
-                    Parâmetros Básicos já extraídos: {json.dumps(params_basicos, ensure_ascii=False)}
-                    
-                    CONTEXTO GERADO ANTERIORMENTE (Use esses IDs se a descrição pedir):
-                    {json.dumps(self.shared_context, ensure_ascii=False)}
-
-                    REGRAS:
-                    - Retorne SOMENTE JSON válido {{ "Campo": "Valor" }}
-                    - Não invente campos que não estejam na descrição ou no contexto.
-                    - Não use camelCase.
-                    """
-        resposta = self._chamar_ia(prompt, json_mode=True)
-
-        try:
-            data = json.loads(resposta)
-            return {k: str(v) for k, v in data.items() if isinstance(v, (str, int))}
-        except Exception:
-            return params_basicos or {} 
-
-    # Captura de IDs gerados (execuções integradas)
     def extrair_id_integrado(self, tcode: str, status_message: str) -> None:
         if not status_message:
             return
@@ -190,7 +166,6 @@ class AITestIntegrator:
             "confianca": 65
         }
 
-    # Helpers
     def _normalize_error(self, tcode: str, message: str) -> str:
         base = f"{tcode}|{message.lower().strip()}"
         return hashlib.md5(base.encode("utf-8")).hexdigest()
