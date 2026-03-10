@@ -12,7 +12,6 @@ def _norm_key(text: str) -> str:
 
 def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str]:
     params = parse_parameters(raw_param)
-
     m = TIPO_RE.search(explanation or "")
     tipo = m.group(1).upper() if m else None
 
@@ -33,13 +32,16 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         "tipo de atividade de manutencao": "Tipo de atividade de manutenção",
         "tipoatvmnt": "Tipo de atividade de manutenção",
         "trabalho": "Trabalho",
+        "trabalho 2": "Trabalho 2",
+        "trabalho 3": "Trabalho 3",
         "nº colaboradores": "Nº colaboradores",
         "no colaboradores": "Nº colaboradores",
         "n colaboradores": "Nº colaboradores",
-        "trabalho 1": "Trabalho 1",
-        "trabalho 2": "Trabalho 2",
-        "nº colaboradores 1": "Nº colaboradores 1",
-        "nº colaboradores 2": "Nº colaboradores 2"
+        "nº colaboradores 2": "Nº colaboradores 2",
+        "nº colaboradores 3": "Nº colaboradores 3",
+        "texto operacao": "Texto Operação",
+        "texto operacao 2": "Texto Operação 2",
+        "texto operacao 3": "Texto Operação 3",
     }
 
     normalized: dict[str, str] = {}
@@ -52,21 +54,28 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
     if "LI" in params:
         li_value = params.pop("LI")
         if tcode_u == "IW21":
-            pass
+            params["Local de instalação"] = li_value
         elif tcode_u in {"IP41", "IP42"}:
             params["Plano manutenção"] = li_value
         else:
             params["Local de instalação"] = li_value
 
     if tcode_u in ["IW31", "IW34"]:
-        if "Trabalho" in params or "Nº colaboradores" in params:
+        has_op = any("Trabalho" in k or "colaboradores" in k or "Operação" in k for k in params)
+        if has_op:
             params["Aba Operações"] = "X"
 
     if tcode_u == "IW31":
-        if "Nota" not in params:
+        if "Nota" not in params or not str(params.get("Nota", "")).strip():
             params["Criar Nota"] = "X"
             if "Prioridade" in params:
                 params["Prioridade da Nota"] = params["Prioridade"]
             
+            params.setdefault("Notificador", "teste")
+            params.setdefault("Ramal", "1111")
+        
+        for k in list(params.keys()):
+            if k.strip().lower() == "nota":
+                params.pop(k)
 
     return params

@@ -308,6 +308,7 @@ class SapAutomation:
 
             while params_to_fill and tela_atual < max_telas:
                 tela_atual += 1
+                print(f"[DEBUG] Tela {tela_atual} - Parâmetros sobrando: {list(params_to_fill.keys())}")
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
                 
                 if error_msg:

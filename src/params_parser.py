@@ -27,6 +27,8 @@ PARAM_ALIASES = {
     "TIPOATVMNT": "Tipo de atividade de manutenção",
     "TIPO ATVMNT": "Tipo de atividade de manutenção",
     "TIPO ATIVIDADE MANUTENÇÃO": "Tipo de atividade de manutenção",
+    "Txt.breve operação": "Texto breve Operação",
+    "TXT.BREVE OPERAÇÃO": "Texto breve Operação",
     
     "RAMAL": "Ramal",
     "CRIAR NOTA": "Criar Nota",
