@@ -1,0 +1,58 @@
+TCODE=IW31 PROGRAM=SAPLCOIH SCREEN=100
+TIMESTAMP=20260310_133023
+--------------------------------------------------------------------------------
+[STATUS_BAR]
+TYPE= | TEXT=
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+[RELEVANT_OBJECTS]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-AUART | TYPE=GuiLabel | NAME=CAUFVD-AUART | TEXT=Tipo ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtAUFPAR-PM_AUFART | TYPE=GuiCTextField | NAME=AUFPAR-PM_AUFART | TEXT=ZCOR | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-PRIOK | TYPE=GuiLabel | NAME=CAUFVD-PRIOK | TEXT=Prioridade | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/cmbCAUFVD-PRIOK | TYPE=GuiComboBox | NAME=CAUFVD-PRIOK | TEXT=                                                                                                                                                                                                                                                                | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-TPLNR | TYPE=GuiLabel | NAME=CAUFVD-TPLNR | TEXT=LocInstal. | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR | TYPE=GuiCTextField | NAME=CAUFVD-TPLNR | TEXT=D10167100-S10167120 | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-PLTXT | TYPE=GuiTextField | NAME=RIOT-PLTXT | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnHILT | TYPE=GuiButton | NAME=HILT | TEXT= | TIP=Lista estrut.
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-EQUNR | TYPE=GuiLabel | NAME=CAUFVD-EQUNR | TEXT=Equipam. | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-EQUNR | TYPE=GuiCTextField | NAME=CAUFVD-EQUNR | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-EQTXT | TYPE=GuiTextField | NAME=RIOT-EQTXT | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnPRED | TYPE=GuiButton | NAME=PRED | TEXT= | TIP=Precedente..
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-BAUTL | TYPE=GuiLabel | NAME=CAUFVD-BAUTL | TEXT=Conjunto | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-BAUTL | TYPE=GuiCTextField | NAME=CAUFVD-BAUTL | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-BAUTX | TYPE=GuiTextField | NAME=RIOT-BAUTX | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnOBJECTINFORMATION | TYPE=GuiButton | NAME=OBJECTINFORMATION | TEXT= | TIP=Informação objeto...
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-IWERK | TYPE=GuiLabel | NAME=CAUFVD-IWERK | TEXT=CenPlanj. | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-IWERK | TYPE=GuiCTextField | NAME=CAUFVD-IWERK | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-GSBER | TYPE=GuiLabel | NAME=CAUFVD-GSBER | TEXT=Divisão | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-GSBER | TYPE=GuiCTextField | NAME=CAUFVD-GSBER | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRC62C-REFNR | TYPE=GuiLabel | NAME=RC62C-REFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRC62C-REFNR | TYPE=GuiCTextField | NAME=RC62C-REFNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/chkRC62C-COPY_DOCL | TYPE=GuiCheckBox | NAME=RC62C-COPY_DOCL | TEXT=Ligações de documentos | TIP=
+--------------------------------------------------------------------------------
+[FULL_TREE]
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-AUART | TYPE=GuiLabel | NAME=CAUFVD-AUART | TEXT=Tipo ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtAUFPAR-PM_AUFART | TYPE=GuiCTextField | NAME=AUFPAR-PM_AUFART | TEXT=ZCOR | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-PRIOK | TYPE=GuiLabel | NAME=CAUFVD-PRIOK | TEXT=Prioridade | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/cmbCAUFVD-PRIOK | TYPE=GuiComboBox | NAME=CAUFVD-PRIOK | TEXT=                                                                                                                                                                                                                                                                | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100 | TYPE=GuiSimpleContainer | NAME=OBJECT:SAPLCOIH:7100 | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-TPLNR | TYPE=GuiLabel | NAME=CAUFVD-TPLNR | TEXT=LocInstal. | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-TPLNR | TYPE=GuiCTextField | NAME=CAUFVD-TPLNR | TEXT=D10167100-S10167120 | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-PLTXT | TYPE=GuiTextField | NAME=RIOT-PLTXT | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnHILT | TYPE=GuiButton | NAME=HILT | TEXT= | TIP=Lista estrut.
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-EQUNR | TYPE=GuiLabel | NAME=CAUFVD-EQUNR | TEXT=Equipam. | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-EQUNR | TYPE=GuiCTextField | NAME=CAUFVD-EQUNR | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-EQTXT | TYPE=GuiTextField | NAME=RIOT-EQTXT | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnPRED | TYPE=GuiButton | NAME=PRED | TEXT= | TIP=Precedente..
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/lblCAUFVD-BAUTL | TYPE=GuiLabel | NAME=CAUFVD-BAUTL | TEXT=Conjunto | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/ctxtCAUFVD-BAUTL | TYPE=GuiCTextField | NAME=CAUFVD-BAUTL | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/txtRIOT-BAUTX | TYPE=GuiTextField | NAME=RIOT-BAUTX | TEXT= | TIP=
+  ID=/app/con[0]/ses[0]/wnd[0]/usr/subOBJECT:SAPLCOIH:7100/btnOBJECTINFORMATION | TYPE=GuiButton | NAME=OBJECTINFORMATION | TEXT= | TIP=Informação objeto...
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-IWERK | TYPE=GuiLabel | NAME=CAUFVD-IWERK | TEXT=CenPlanj. | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-IWERK | TYPE=GuiCTextField | NAME=CAUFVD-IWERK | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblCAUFVD-GSBER | TYPE=GuiLabel | NAME=CAUFVD-GSBER | TEXT=Divisão | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtCAUFVD-GSBER | TYPE=GuiCTextField | NAME=CAUFVD-GSBER | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/box%#AUTOTEXT001 | TYPE=GuiBox | NAME=%#AUTOTEXT001 | TEXT=Modelo | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/lblRC62C-REFNR | TYPE=GuiLabel | NAME=RC62C-REFNR | TEXT=Ordem | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/ctxtRC62C-REFNR | TYPE=GuiCTextField | NAME=RC62C-REFNR | TEXT= | TIP=
+ID=/app/con[0]/ses[0]/wnd[0]/usr/chkRC62C-COPY_DOCL | TYPE=GuiCheckBox | NAME=RC62C-COPY_DOCL | TEXT=Ligações de documentos | TIP=
