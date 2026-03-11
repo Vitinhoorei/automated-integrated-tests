@@ -56,6 +56,10 @@ IW34:
 IW32:
   "SAPLCOIH|0100":
     "Ordem": 'wnd[0]/usr/ctxtCAUFVD-AUFNR'
+    "Imprimir": 'wnd[0]/tbar[1]/btn[25]'
+    "Documentação ordem 2080": 'wnd[0]/tbar[0]/btn[86]'
+    "Selecionar documentação 2080": 'wnd[1]/usr/tblSAPLIPRTTC_WORKPAPERS/txtWWORKPAPER-WORKPAPER[0,8]'
+    "Visualização de impressão": 'wnd[1]/tbar[0]/btn[16]'
 
 IW41:
   "SAPLCORU|0100":
