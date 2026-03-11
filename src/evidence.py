@@ -2,13 +2,11 @@ from pathlib import Path
 from datetime import datetime
 import re
 
-
 def ensure_dir(path: str) -> None:
     """
     Garante que o diretório exista.
     """
     Path(path).mkdir(parents=True, exist_ok=True)
-
 
 def _sanitize(text: str) -> str:
     """
@@ -19,7 +17,6 @@ def _sanitize(text: str) -> str:
     text = str(text)
     text = re.sub(r"[^\w\-]+", "_", text.strip())
     return text[:60] or "UNK"
-
 
 def evidence_filename(
     exec_id: str,

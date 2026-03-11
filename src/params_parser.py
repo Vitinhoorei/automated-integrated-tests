@@ -1,39 +1,43 @@
 from __future__ import annotations
 import unicodedata
+import re
 
 PARAM_ALIASES = {
     "LI": "Local de instalação",
-    "LOCAL INSTALAÇÃO": "Local de instalação",
-    "LOCAL DE INSTALAÇÃO": "Local de instalação",
+    "LOCAL INSTALACAO": "Local de instalação",
+    "LOCAL DE INSTALACAO": "Local de instalação",
 
-    "Nº EQUIPAMENTO": "Nº equipamento",
+    "N EQUIPAMENTO": "Nº equipamento",
+    "NUM EQUIPAMENTO": "Nº equipamento",
+    "NUMERO EQUIPAMENTO": "Nº equipamento",
     "EQUIPAMENTO": "Nº equipamento",
     "EQUIPAM": "Nº equipamento",
-    "N EQUIPAMENTO": "Nº equipamento",
 
     "PRIORIDADE": "Prioridade",
 
     "TRABALHO": "Trabalho",
     "TRAB": "Trabalho",
 
-    "Nº COLABORADORES": "Nº colaboradores",
-    "NUMERO COLABORADORES": "Nº colaboradores",
-    "NUM COLABORADORES": "Nº colaboradores",
     "N COLABORADORES": "Nº colaboradores",
+    "NUM COLABORADORES": "Nº colaboradores",
+    "NUMERO COLABORADORES": "Nº colaboradores",
     "N COLAB": "Nº colaboradores",
-    
+
     "IMPRIMIR": "Imprimir",
 
     "TIPOATVMNT": "Tipo de atividade de manutenção",
     "TIPO ATVMNT": "Tipo de atividade de manutenção",
-    "TIPO ATIVIDADE MANUTENÇÃO": "Tipo de atividade de manutenção",
-    "Txt.breve operação": "Texto breve Operação",
-    "TXT.BREVE OPERAÇÃO": "Texto breve Operação",
-    
+    "TIPO ATIVIDADE MANUTENCAO": "Tipo de atividade de manutenção",
+
+    "TXT BREVE OPERACAO": "Texto breve Operação",
+    "TEXTO BREVE OPERACAO": "Texto breve Operação",
+
     "RAMAL": "Ramal",
     "CRIAR NOTA": "Criar Nota",
     "PRIORIDADE DA NOTA": "Prioridade da Nota",
     "NOTIFICADOR": "Notificador",
+    
+    "UNIDADE": "Unidade para a execução de medidas de manutenção",
 }
 
 def remove_acento(txt: str) -> str:
@@ -42,29 +46,43 @@ def remove_acento(txt: str) -> str:
         if unicodedata.category(c) != 'Mn'
     )
 
+def normalize_alias_key(key: str) -> str:
+    """
+    Normaliza chave para busca no alias
+    """
+    key = key.strip().upper()
+    key = remove_acento(key)
+    key = re.sub(r"[^\w\s]", " ", key)
+    key = " ".join(key.split())
+    
+    return key
+
 def normalize_key(key: str) -> str:
     """
-    Normaliza chave do Excel para o nome esperado no field_map.yaml
+    Converte chave recebida para o nome esperado no field_map
     """
-    k = key.strip().upper()
-    if k in PARAM_ALIASES:
-        return PARAM_ALIASES[k]
     
-    k_sem_acento = remove_acento(k)
+    alias_key = normalize_alias_key(key)
 
-    if k_sem_acento in PARAM_ALIASES:
-        return PARAM_ALIASES[k_sem_acento]
+    if alias_key in PARAM_ALIASES:
+        return PARAM_ALIASES[alias_key]
+
     return key.strip()
 
 def parse_parameters(raw: str) -> dict[str, str]:
     """
-    Formato aceito:
-      "LI: D10167100-S10167120 | Grupo Planejamento: MUT | Campo Ordenação: Manut Utilitários"
+    Converte string de parâmetros em dict
+    Exemplo entrada:
+    LI: D10167100 | PRIORIDADE: 2 | TRABALHO: 1
+    Saída:
 
-    - separa por "|"
-    - cada item vira chave:valor
-    - aplica alias para nomes conhecidos
+    {
+        "Local de instalação": "D10167100",
+        "Prioridade": "2",
+        "Trabalho": "1"
+    }
     """
+
     raw = (raw or "").strip()
     if not raw:
         return {}
@@ -75,13 +93,12 @@ def parse_parameters(raw: str) -> dict[str, str]:
     for p in parts:
         if ":" not in p:
             continue
-
+        
         k, v = p.split(":", 1)
-
         key = normalize_key(k)
         value = v.strip()
 
         if key:
             out[key] = value
-            
+
     return out
