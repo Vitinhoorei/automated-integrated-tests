@@ -368,15 +368,13 @@ class SapAutomation:
             has_iw31_operation_flow = tcode.upper() == "IW31" and bool(self._pending_iw31_operation_fields(params_to_fill))
             iw31_operations_enter_done = False
             iw31_operations_save_done = False
+            is_iw32_print_flow = tcode.upper() == "IW32" and "imprimir" in (explanation or "").lower()
 
             while params_to_fill and tela_atual < max_telas:
                 tela_atual += 1
                 print(f"[DEBUG] Tela {tela_atual} - Parâmetros sobrando: {list(params_to_fill.keys())}")
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
-
-                # ✅ AJUSTE MINIMO:
-                # só no IW31, quando não restarem mais campos de operação,
-                # dá UM enter e depois salva. Não afeta o restante do fluxo.
+                
                 if has_iw31_operation_flow and tcode.upper() == "IW31":
                     pending_ops = self._pending_iw31_operation_fields(params_to_fill)
 
@@ -388,6 +386,12 @@ class SapAutomation:
                             continue
 
                         if iw31_operations_enter_done and not iw31_operations_save_done:
+                            try:
+                                self.session.findById("wnd[0]/tbar[1]/btn[25]").press()
+                                time.sleep(1.0)
+                            except Exception:
+                                pass
+                            
                             saved = self._save_current_document()
                             if saved:
                                 iw31_operations_save_done = True
@@ -460,6 +464,43 @@ class SapAutomation:
 
             self.execute_default()
             time.sleep(1.5)
+            self.execute_default() 
+            time.sleep(1.5)
+
+            if is_iw32_print_flow and tcode.upper() == "IW32":
+                try:
+                    self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
+                    time.sleep(1.5)
+                    
+                    self.session.findById("wnd[1]/usr/tblSAPLIPRTTC_WORKPAPERS").getAbsoluteRow(8).selected = True
+                    self.session.findById("wnd[1]/tbar[0]/btn[16]").press()
+                    time.sleep(3.0) 
+                    ev = self._capture_success_evidence(evidence_path)
+                    msg = "Visualização de impressão gerada com sucesso na tela."
+                    
+                    try:
+                        self.session.findById("wnd[0]/tbar[0]/btn[12]").press() 
+                        time.sleep(0.8)
+                        
+                        if self._popup_exists():
+                            try:
+                                self.session.findById("wnd[1]").close()
+                            except:
+                                self._dismiss_popup()
+                            time.sleep(0.5)
+                            
+                        self.session.findById("wnd[0]/tbar[0]/btn[12]").press()
+                        time.sleep(0.8)
+                        
+                        if self._popup_exists():
+                            self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                    except Exception:
+                        pass 
+                    return SapResult("PASS", "OK", msg, ev)
+                    
+                except Exception as e:
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult("FAIL", "EXCEPTION", f"Falha na impressão IW32: {e}", ev)
 
             while self._popup_exists():
                 txt = self._popup_text()
@@ -481,6 +522,13 @@ class SapAutomation:
             botoes_salvar = ["wnd[0]/tbar[0]/btn[11]", "wnd[0]/tbar[1]/btn[11]"]
             for tentativa in range(3):
                 try:
+                    if tcode.upper() == "IW31":
+                        try:
+                            self.session.findById("wnd[0]/tbar[1]/btn[25]").press()
+                            time.sleep(1.0)
+                        except Exception:
+                            pass
+                        
                     clicou = False
                     for btn in botoes_salvar:
                         try:
