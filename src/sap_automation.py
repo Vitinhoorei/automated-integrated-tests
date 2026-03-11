@@ -85,7 +85,7 @@ class SapAutomation:
                     return wnd1.findByName(name, "GuiTextField").Text
                 except Exception:
                     pass
-            texts = []
+            texts =[]
             try:
                 for i in range(wnd1.Children.Count):
                     child = wnd1.Children(i)
@@ -103,7 +103,7 @@ class SapAutomation:
             wnd1 = self.session.findById("wnd[1]")
         except Exception:
             return
-        botoes_confirmacao = ["tbar[0]/btn[0]", "usr/btnBUTTON_1", "tbar[0]/btn[11]"]
+        botoes_confirmacao =["tbar[0]/btn[0]", "usr/btnBUTTON_1", "tbar[0]/btn[11]"]
         for btn in botoes_confirmacao:
             try:
                 wnd1.findById(btn).press()
@@ -236,76 +236,6 @@ class SapAutomation:
         except Exception:
             return False
 
-    def _run_iw32_print_flow(self, evidence_path: str = "") -> SapResult:
-        """
-        Fluxo especial do IW32:
-        Enter -> Imprimir -> Documentação ordem 2080 -> selecionar linha -> Visualização de impressão
-        """
-        mapping = self.field_map.get("IW32", {}).get("SAPLCOIH|0100", {})
-        mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
-
-        try:
-            # Enter após abrir a ordem
-            self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.8)
-
-            # Imprimir
-            btn_imprimir = mapping.get("Imprimir") or mapping_norm.get(self._norm_key("Imprimir"))
-            if not btn_imprimir:
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", "ID de 'Imprimir' não encontrado no field_map.", ev)
-
-            self.session.findById(btn_imprimir).press()
-            time.sleep(0.8)
-
-            # Documentação ordem 2080
-            btn_doc = mapping.get("Documentação ordem 2080") or mapping_norm.get(self._norm_key("Documentação ordem 2080"))
-            if not btn_doc:
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", "ID de 'Documentação ordem 2080' não encontrado no field_map.", ev)
-
-            self.session.findById(btn_doc).press()
-            time.sleep(1.0)
-
-            # Selecionar linha 2080
-            campo_sel = mapping.get("Selecionar documentação 2080") or mapping_norm.get(self._norm_key("Selecionar documentação 2080"))
-            if not campo_sel:
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", "ID de 'Selecionar documentação 2080' não encontrado no field_map.", ev)
-
-            self.session.findById("wnd[1]/usr/tblSAPLIPRTTC_WORKPAPERS").getAbsoluteRow(8).selected = True
-            self.session.findById(campo_sel).setFocus()
-            self.session.findById(campo_sel).caretPosition = 0
-            time.sleep(0.5)
-
-            # Visualização de impressão
-            btn_preview = mapping.get("Visualização de impressão") or mapping_norm.get(self._norm_key("Visualização de impressão"))
-            if not btn_preview:
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", "ID de 'Visualização de impressão' não encontrado no field_map.", ev)
-
-            self.session.findById(btn_preview).press()
-            time.sleep(1.2)
-
-            while self._popup_exists():
-                self._dismiss_popup()
-                time.sleep(0.4)
-
-            sb = self._statusbar_text()
-            sb_type = self._statusbar_type()
-
-            if sb_type in {"E", "A", "X"}:
-                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP no fluxo de impressão do IW32", ev)
-
-            ev = self._capture_success_evidence(evidence_path)
-            return SapResult("PASS", "OK", sb or "Fluxo IW32 de impressão executado com sucesso", ev)
-
-        except Exception as e:
-            dump = dump_screen(self.session) if self.session else ""
-            ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-            return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
-
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         """
         Retorna (remaining_params, error_msg, action_taken).
@@ -358,7 +288,7 @@ class SapAutomation:
                     if obj_type == "GuiComboBox":
                         obj.key = val_str
                     elif obj_type in ("GuiCheckBox", "GuiRadioButton"):
-                        obj.selected = (val_str.upper() in ["X", "1", "TRUE", "SIM", "S", "Y", "YES"])
+                        obj.selected = (val_str.upper() in["X", "1", "TRUE", "SIM", "S", "Y", "YES"])
                     else:
                         try:
                             obj.text = val_str
@@ -379,7 +309,7 @@ class SapAutomation:
             for key, (obj, value) in botoes.items():
                 if not clicked_one:
                     val_str = str(value).strip().upper()
-                    if val_str in ["X", "1", "TRUE", "SIM", "S", "Y", "YES"]:
+                    if val_str in["X", "1", "TRUE", "SIM", "S", "Y", "YES"]:
                         try:
                             obj.press()
                             action_taken = "BUTTON"
@@ -430,12 +360,8 @@ class SapAutomation:
             self._ensure_session()
             self.open_tcode(tcode)
 
-            # ✅ fluxo especial do IW32
-            if tcode.upper() == "IW32":
-                return self._run_iw32_print_flow(evidence_path=evidence_path)
-
             params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
-            popup_msgs = []
+            popup_msgs =[]
             max_telas = 10
             tela_atual = 0
 
@@ -448,10 +374,7 @@ class SapAutomation:
                 tela_atual += 1
                 print(f"[DEBUG] Tela {tela_atual} - Parâmetros sobrando: {list(params_to_fill.keys())}")
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
-
-                # ✅ AJUSTE MINIMO:
-                # só no IW31, quando não restarem mais campos de operação,
-                # dá UM enter e depois salva. Não afeta o restante do fluxo.
+                
                 if has_iw31_operation_flow and tcode.upper() == "IW31":
                     pending_ops = self._pending_iw31_operation_fields(params_to_fill)
 
@@ -539,11 +462,11 @@ class SapAutomation:
                 ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
                 return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
 
+            # Aperta Enter uma vez para sair da tela inicial e entrar na Ordem de fato
             self.execute_default()
             time.sleep(1.5)
-            self.execute_default() 
-            time.sleep(1.5)
 
+            # --- FLUXO DA IW32: IMPRESSÃO E VISUALIZAÇÃO ---
             if is_iw32_print_flow and tcode.upper() == "IW32":
                 try:
                     self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
