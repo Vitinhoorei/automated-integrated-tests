@@ -60,6 +60,14 @@ IW32:
 IW41:
   "SAPLCORU|0100":
     "Ordem": 'wnd[0]/usr/ctxtCORUF-AUFNR'
+    "Nº pessoal": 'wnd[0]/usr/ctxtAFRUD-PERNR'
+    "Conf.final": 'wnd[0]/usr/chkAFRUD-AUERU'
+    "Dar baixa res.": 'wnd[0]/usr/chkAFRUD-AUSOR'
+    "Início trabalho data": 'wnd[0]/usr/ctxtAFRUD-ISDD'
+    "Início trabalho hora": 'wnd[0]/usr/ctxtAFRUD-ISDZ'
+    "Fim trabalho data": 'wnd[0]/usr/ctxtAFRUD-IEDD'
+    "Fim trabalho hora": 'wnd[0]/usr/ctxtAFRUD-IEDZ'
+    "Tabela confirmações": 'wnd[0]/usr/tblSAPLCORUTC_3100'
 
 IP41:
   "SAPLIWP3|0100":
