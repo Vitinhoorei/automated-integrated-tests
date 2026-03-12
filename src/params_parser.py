@@ -37,7 +37,13 @@ PARAM_ALIASES = {
     "PRIORIDADE DA NOTA": "Prioridade da Nota",
     "NOTIFICADOR": "Notificador",
     
-    "UNIDADE": "Unidade para a execução de medidas de manutenção",
+    "UNIDADE": "Unidade do ciclo",
+    "UNIDADE DO CICLO": "Unidade do ciclo",
+    "CTG PLANO DE MANUTENCAO": "Ctg.plano de manutenção",
+    "TEXTO PLANO DE MANUTENCAO": "Texto do plano de manutenção",
+    "DESCRICAO DA OPERACAO": "Descrição da operação",
+    "CAMPO ORDENAÇÃO": "Campo seleção p/planos de manutenção",
+    
 }
 
 def remove_acento(txt: str) -> str:

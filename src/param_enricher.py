@@ -25,6 +25,8 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
     alias_to_target = {
         "li": "LI",
         "local de instalacao": "Local de instalação",
+        "nº equipamento": "Nº equipamento",
+        "n equipamento": "Nº equipamento",
         "tipo de nota": "Tipo de nota",
         "tipo de ordem": "Tipo de ordem",
         "tipo de atividade de manutencao": "Tipo de atividade de manutenção",
@@ -42,13 +44,15 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         "texto operacao 3": "Texto Operação 3",
         "descricao operacao": "Descrição da operação",
         "duracao": "Duração",
+        "unidade": "Unidade do ciclo",
         "unidade duracao": "Unidade duração",
         "unidade trabalho": "Unidade trabalho",
         "grupo planejamento": "Grupo de planejamento",
         "status plano": "Status do plano",
         "utilizacao": "Utilização",
-        "ctg plano manutencao": "Ctg.plano manutenção",
-
+        "ctg plano de manutencao": "Ctg.plano de manutenção",
+        "descricao da operacao": "Descrição da operação",
+        "campo ordenacao": "Campo Ordenação",
     }
 
     normalized: dict[str, str] = {}
@@ -89,5 +93,10 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         for k in list(params.keys()):
             if k.strip().lower() == "nota":
                 params.pop(k)
+    
+    if tcode_u == "IP41":
+        val_prog = str(params.get("Campo Ordenação", "")).strip().lower()
+        if val_prog in["manut utilitários", "manut utilitarios", "manut. utilitários"]:
+            params["Campo Ordenação"] = "M8"
 
     return params

@@ -468,43 +468,51 @@ class SapAutomation:
             def get_val(key):
                 for pk, pv in parameters.items():
                     if self._norm_key(pk) == self._norm_key(key):
-                        return pv
+                        return str(pv).strip() if pv is not None else ""
                 return ""
 
             def get_id(key):
-                return mapping.get(key) or mapping_norm.get(self._norm_key(key))
+                sap_id = mapping.get(key) or mapping_norm.get(self._norm_key(key))
+                if not sap_id:
+                    raise ValueError(f"Campo '{key}' não mapeado no field_map.yaml da IP41.")
+                return sap_id
 
-            ctg = get_val("Ctg.plano manutenção") or get_val("Ctg.plano manut.")
+            def safe_set_text(key_name):
+                val = get_val(key_name)
+                if val:
+                    self.session.findById(get_id(key_name)).text = val
+
+            def safe_set_key(key_name):
+                val = get_val(key_name)
+                if val:
+                    self.session.findById(get_id(key_name)).key = val
+
+            ctg = get_val("Ctg.plano de manutenção") or get_val("Ctg.plano manut.")
             if ctg:
-                self.session.findById(get_id("Ctg.plano manutenção")).key = str(ctg).strip()
+                self.session.findById(get_id("Ctg.plano de manutenção")).key = ctg
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
 
-            self.session.findById(get_id("Texto do plano de manutenção")).text = get_val("Texto do plano de manutenção")
-            self.session.findById(get_id("Ciclo")).text = get_val("Ciclo")
-            self.session.findById(get_id("Unidade do ciclo")).text = get_val("Unidade do ciclo")
+            safe_set_text("Texto do plano de manutenção")
+            safe_set_text("Ciclo")
+            safe_set_text("Unidade do ciclo")
+            safe_set_text("Local de instalação")
+            safe_set_text("Nº equipamento")
+            safe_set_text("Tipo de ordem")
+            safe_set_text("Tipo de atividade de manutenção")
             
-            loc = get_val("Local de instalação")
-            if loc:
-                self.session.findById(get_id("Local de instalação")).text = loc
-            
-            equip = get_val("Equipamento")
-            if equip:
-                self.session.findById(get_id("Equipamento")).text = equip
-                
-            self.session.findById(get_id("Tipo de ordem")).text = get_val("Tipo de ordem")
-            self.session.findById(get_id("Tipo de atividade de manutenção")).text = get_val("Tipo de atividade de manutenção")
             self.session.findById("wnd[0]").sendVKey(0)
-            
             time.sleep(0.8)
             
-            prio = get_val("Prioridade")
-            if prio:
-                self.session.findById(get_id("Prioridade")).key = str(prio).strip()
+            safe_set_key("Prioridade")
 
-            self.session.findById("wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\03").select()
-            time.sleep(0.5)
-            self.session.findById(get_id("Tipo de programação")).key = get_val("Tipo de programação")
+            try:
+                self.session.findById("wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\03").select()
+                time.sleep(0.5)
+                safe_set_key("Campo Ordenação")
+            except Exception:
+                pass
+
             self.session.findById("wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\01").select()
             time.sleep(0.5)
             self.session.findById(get_id("Criar lista de tarefas")).press()
@@ -513,20 +521,24 @@ class SapAutomation:
             if self._popup_exists():
                 self.session.findById("wnd[1]/tbar[0]/btn[0]").press() 
                 time.sleep(0.8)
+                
+            self.session.findById("wnd[0]").sendVKey(0)
+            time.sleep(1.0)
 
-            self.session.findById(get_id("Utilização")).text = get_val("Utilização")
-            self.session.findById(get_id("Grupo de planejamento")).text = get_val("Grupo de planejamento")
-            self.session.findById(get_id("Status do plano")).text = str(get_val("Status do plano")).strip()
+            safe_set_text("Utilização")
+            safe_set_text("Grupo de planejamento")
+            safe_set_text("Status do plano")
+            
             self.session.findById("wnd[0]/tbar[1]/btn[16]").press()
             time.sleep(0.8)
             
-            self.session.findById(get_id("Descrição da operação")).text = get_val("Descrição da operação")
-            self.session.findById(get_id("Trabalho")).text = get_val("Trabalho")
-            self.session.findById(get_id("Unidade trabalho")).text = get_val("Unidade trabalho")
-            self.session.findById(get_id("Duração")).text = get_val("Duração")
-            self.session.findById(get_id("Unidade duração")).text = get_val("Unidade duração")
-            self.session.findById("wnd[0]").sendVKey(0)
+            safe_set_text("Descrição da operação")
+            safe_set_text("Trabalho")
+            safe_set_text("Unidade trabalho")
+            safe_set_text("Duração")
+            safe_set_text("Unidade duração")
             
+            self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(1.0)
             ev = self._capture_success_evidence(evidence_path)
 
@@ -562,7 +574,7 @@ class SapAutomation:
 
         except Exception as e:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-            return SapResult("FAIL", "EXCEPTION", f"Erro no fluxo IP41: {e}", ev)
+            return SapResult("FAIL", "EXCEPTION", f"Erro interno Python/COM no fluxo IP41: {type(e).__name__} - {e}", ev)
         
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         """
