@@ -1,0 +1,77 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.pyd
+*.so
+*.dll
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# VS Code / JetBrains
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# SAP / project outputs
+data/evidence/
+data/output/
+output/
+evidence/
+
+# Dumps / screenshots / reports
+*.bmp
+*.png
+*.jpg
+*.jpeg
+*.txt
+
+# Excel temporários / lock
+~$*.xlsx
+~$*.xlsm
+
+# Local config overrides
+config.local.py
+configs/*.local.yaml
+
+# Windows Python launcher artifacts
+pip-wheel-metadata/
+
+# If you generate test result files
+results/
+reports/
