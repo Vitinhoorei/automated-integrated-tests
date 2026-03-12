@@ -12,7 +12,6 @@ def _clean_text(text: str, max_len: int | None = None) -> str:
         return txt[: max_len - 3] + "..."
     return txt
 
-
 def build_status(
     status: str,
     source: str = "",
@@ -40,7 +39,6 @@ def build_status(
 
     return " | ".join(parts)
 
-
 def build_status_fields(
     *,
     status: str,
@@ -65,7 +63,6 @@ def build_status_fields(
 
     msg = _clean_text(message, max_len=max_message_len)
 
-    # Proteção contra duplicação acidental
     if msg:
         msg_low = msg.lower()
         if status_u.lower() in msg_low:

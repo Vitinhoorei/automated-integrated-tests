@@ -12,7 +12,6 @@ IMPORTANT_TYPES = {
     "GuiButton",
 }
 
-
 def dump_screen(session, out_dir: str = "data/dumps") -> str:
     """
     Gera dump estruturado da tela SAP.
@@ -25,9 +24,7 @@ def dump_screen(session, out_dir: str = "data/dumps") -> str:
     prog = getattr(info, "Program", "UNK")
     scr = getattr(info, "ScreenNumber", "UNK")
     tcode = getattr(info, "Transaction", "UNK")
-
     file_path = Path(out_dir) / f"DUMP_{tcode}_{prog}_{scr}_{ts}.txt"
-
     lines: list[str] = []
 
     # HEADER
@@ -85,7 +82,6 @@ def dump_screen(session, out_dir: str = "data/dumps") -> str:
             name = safe_get(child, "Name")
             text = safe_get(child, "Text")
             tip = safe_get(child, "Tooltip")
-
             indent = "  " * depth
             line = (
                 f"{indent}ID={obj_id} | TYPE={obj_type} | "
