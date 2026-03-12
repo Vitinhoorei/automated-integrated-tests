@@ -306,7 +306,6 @@ class SapAutomation:
                 self._dismiss_popup()
                 time.sleep(0.3)
         else:
-            # simulado: só valida o fluxo, sem gravar
             try:
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.5)
@@ -343,14 +342,13 @@ class SapAutomation:
             if ordem and ordem_id:
                 self._set_text_if_exists(ordem_id, ordem)
 
-            # igual ao teu recording
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
 
             ontem = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
-            hora_inicio_dt = datetime.strptime("13:00", "%H:%M")
+            hora_inicio_dt = datetime.strptime("11:00", "%H:%M")
             hora_fim_dt = hora_inicio_dt + timedelta(hours=2)
             hora_inicio = hora_inicio_dt.strftime("%H:%M")
             hora_fim = hora_fim_dt.strftime("%H:%M")
@@ -359,41 +357,64 @@ class SapAutomation:
 
             # CASO 1: existe tabela/lista com 1+ linhas
             if table_id and self._table_exists(table_id):
-                table = self.session.findById(table_id)
+                row_idx = 0
 
-                try:
-                    row_count = int(getattr(table, "RowCount", 0))
-                except Exception:
-                    row_count = 0
-
-                if row_count <= 0:
-                    row_count = 10  # fallback
-
-                for row_idx in range(row_count):
-                    # tenta selecionar a linha; se falhar, encerra o loop
-                    try:
-                        table.getAbsoluteRow(row_idx).selected = True
-                    except Exception:
+                while True:
+                    if not self._table_exists(table_id):
                         break
 
                     try:
-                        icon_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]"
-                        self.session.findById(icon_id).setFocus()
-                        self.session.findById(icon_id).caretPosition = 0
-                        self.session.findById("wnd[0]").sendVKey(0)
-                        time.sleep(0.5)
+                        table = self.session.findById(table_id)
+                        row_count = int(getattr(table, "RowCount", 0))
                     except Exception:
+                        break
+
+                    if row_count <= 0 or row_idx >= row_count:
+                        break
+
+                    try:
+                        table.getAbsoluteRow(row_idx).selected = True
+                        time.sleep(0.2)
+                    except Exception:
+                        break
+
+                    entrou_linha = False
+                    for icon_candidate in [
+                        f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]",
+                        f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]",
+                    ]:
+                        try:
+                            obj = self.session.findById(icon_candidate)
+                            obj.setFocus()
+                            try:
+                                obj.caretPosition = 0
+                            except Exception:
+                                pass
+                            self.session.findById("wnd[0]").sendVKey(0)
+                            time.sleep(0.5)
+                            entrou_linha = True
+                            break
+                        except Exception:
+                            continue
+
+                    if not entrou_linha:
+                        row_idx += 1
                         continue
 
+                    abriu_detalhe = False
                     try:
                         chk_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]"
                         self.session.findById(chk_id).setFocus()
                         self.session.findById("wnd[0]").sendVKey(2)
                         time.sleep(0.7)
+                        abriu_detalhe = True
                     except Exception:
+                        pass
+
+                    if not abriu_detalhe:
+                        row_idx += 1
                         continue
 
-                    # preenche detalhe
                     self._set_checkbox_if_exists(conf_final_id, False)
                     self._set_checkbox_if_exists(baixa_res_id, False)
 
@@ -416,14 +437,34 @@ class SapAutomation:
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
                         return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao gravar linha {row_idx + 1} no IW41.", ev)
 
-                    # volta para continuar na próxima
-                    try:
-                        self.session.findById("wnd[0]").sendVKey(0)
-                        time.sleep(0.6)
-                    except Exception:
-                        pass
-
                     processed += 1
+
+                    voltou = False
+                    for _ in range(3):
+                        try:
+                            self.session.findById("wnd[0]").sendVKey(0)
+                            time.sleep(0.6)
+                        except Exception:
+                            pass
+
+                        if self._table_exists(table_id):
+                            voltou = True
+                            break
+
+                        try:
+                            self.session.findById("wnd[0]").sendVKey(12)
+                            time.sleep(0.6)
+                        except Exception:
+                            pass
+
+                        if self._table_exists(table_id):
+                            voltou = True
+                            break
+
+                    if not voltou and not self._table_exists(table_id):
+                        break
+
+                    row_idx += 1
 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
@@ -736,7 +777,10 @@ class SapAutomation:
                         time.sleep(0.8)
 
                         if self._popup_exists():
-                            self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                            if is_real_mode:
+                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                            else:
+                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION2").press()
                     except Exception:
                         pass
 
