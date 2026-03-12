@@ -852,7 +852,10 @@ class SapAutomation:
                         time.sleep(0.8)
 
                         if self._popup_exists():
-                            self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                            if is_real_mode:
+                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press() 
+                            else:
+                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION2").press()  
                     except Exception:
                         pass
 
