@@ -6,10 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 IA_API_KEY = os.getenv("IA_API_KEY", "")
-IA_BASE_URL = os.getenv(
-    "IA_BASE_URL",
-    "https://apihub.weg.net/external/fb8df9df-d49b-42b3-8da0-794e175cab44/v1/chat_genai",
-)
+IA_BASE_URL = os.getenv("IA_BASE_URL", "")
 
 @dataclass
 class AppConfig:

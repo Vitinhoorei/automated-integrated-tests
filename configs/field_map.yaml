@@ -3,6 +3,7 @@ IW21:
     "Tipo de nota": 'wnd[0]/usr/ctxtRIWO00-QMART'
     "Nota": 'wnd[0]/usr/ctxtRIWO00-QMNUM'
     "Nº modelo nota": 'wnd[0]/usr/ctxtRIWO00-QWRNUM'
+
   "SAPLIQS0|7200":
     "Texto Breve": 'wnd[0]/usr/subSCREEN_1:SAPLIQS0:1050/subNOTIF_TYPE:SAPLIQS0:1051/txtVIQMEL-QMTXT'
     "Local de instalação": 'wnd[0]/usr/tabsTAB_GROUP_10/tabp10\TAB01/ssubSUB_GROUP_10:SAPLIQS0:7235/subCUSTOM_SCREEN:SAPLIQS0:7212/subSUBSCREEN_1:SAPLIQS0:7322/subOBJEKT:SAPLIWO1:0100/ctxtRIWO1-TPLNR'
@@ -45,6 +46,7 @@ IW34:
   "SAPLCOIH|0100":
     "Tipo de ordem": 'wnd[0]/usr/ctxtAUFPAR-PM_AUFART'
     "Nota": 'wnd[0]/usr/ctxtAUFPAR-QMNUM'
+    
   "SAPLCOIH|3000":
     "Texto Breve": 'wnd[0]/usr/subSUB_ALL:SAPLCOIH:3001/ssubSUB_LEVEL:SAPLCOIH:1100/subSUB_KOPF:SAPLCOIH:1102/txtCAUFVD-KTEXT'
     "Tipo de atividade de manutenção": 'wnd[0]/usr/subSUB_ALL:SAPLCOIH:3001/ssubSUB_LEVEL:SAPLCOIH:1100/tabsTS_1100/tabpIHKZ/ssubSUB_AUFTRAG:SAPLCOIH:1120/subHEADER:SAPLCOIH:0154/ctxtCAUFVD-ILART'
@@ -60,11 +62,52 @@ IW32:
 IW41:
   "SAPLCORU|0100":
     "Ordem": 'wnd[0]/usr/ctxtCORUF-AUFNR'
+    "Nº pessoal": 'wnd[0]/usr/ctxtAFRUD-PERNR'
+    "Conf.final": 'wnd[0]/usr/chkAFRUD-AUERU'
+    "Dar baixa res.": 'wnd[0]/usr/chkAFRUD-AUSOR'
+    "Início trabalho data": 'wnd[0]/usr/ctxtAFRUD-ISDD'
+    "Início trabalho hora": 'wnd[0]/usr/ctxtAFRUD-ISDZ'
+    "Fim trabalho data": 'wnd[0]/usr/ctxtAFRUD-IEDD'
+    "Fim trabalho hora": 'wnd[0]/usr/ctxtAFRUD-IEDZ'
+    "Tabela confirmações": 'wnd[0]/usr/tblSAPLCORUTC_3100'
 
 IP41:
   "SAPLIWP3|0100":
-    "Plano manutenção": 'wnd[0]/usr/txtRMIPM-WARPL'
-    "Ctg.plano manut.": 'wnd[0]/usr/cmbRMIPM-MPTYP'
+    "Ctg.plano de manutenção": "wnd[0]/usr/cmbRMIPM-MPTYP"
+
+  "SAPLIWP3|6000":
+    "Texto do plano de manutenção": "wnd[0]/usr/subSUBSCREEN_HEAD:SAPLIWP3:6000/txtRMIPM-WPTXT"
+
+  "SAPLIWP3|0205":
+    "Ciclo": "wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\01/ssubSUBSCREEN_BODY1:SAPLIWP3:8011/subSUBSCREEN_CYCLE:SAPLIWP3:0205/txtRMIPM-ZYKL1"
+    "Unidade do ciclo": "wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\01/ssubSUBSCREEN_BODY1:SAPLIWP3:8011/subSUBSCREEN_CYCLE:SAPLIWP3:0205/ctxtRMIPM-ZEIEH"
+
+  "SAPLIWO1|0100":
+    "Local de instalação": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_1:SAPLIWO1:0100/ctxtRIWO1-TPLNR"
+    "Nº equipamento": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_1:SAPLIWO1:0100/ctxtRIWO1-EQUNR"
+
+  "SAPLIWP3|0500":
+    "Tipo de ordem": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_2:SAPLIWP3:0500/ctxtRMIPM-AUART"
+    "Tipo de atividade de manutenção": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_2:SAPLIWP3:0500/ctxtRMIPM-ILART"
+    "Prioridade": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_2:SAPLIWP3:0500/cmbRMIPM-PRIOK"
+
+  "SAPLIWP3|0113":
+    "Campo Ordenação": "wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\03/ssubSUBSCREEN_BODY1:SAPLIWP3:8012/subSUBSCREEN_PARAMETER:SAPLIWP3:0113/cmbRMIPM-PLAN_SORT"
+
+  "SAPLIWP3|8022":
+    "Criar lista de tarefas": "wnd[0]/usr/subSUBSCREEN_MITEM:SAPLIWP3:8002/tabsTABSTRIP_ITEM/tabpT\\11/ssubSUBSCREEN_BODY2:SAPLIWP3:8022/subSUBSCREEN_ITEM_2:SAPLIWP3:0500/btnARBEITSPLAN_1"
+
+  "SAPLCPDI|1000":
+    "Utilização": "wnd[0]/usr/ctxtPLKOD-VERWE"
+    "Grupo de planejamento": "wnd[0]/usr/ctxtPLKOD-VAGRP"
+    "Status do plano": "wnd[0]/usr/ctxtPLKOD-STATU"
+
+  "SAPLCPDI|3400":
+    "Descrição da operação": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/txtPLPOD-LTXA1[5,0]"
+    "Trabalho": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/txtPLPOD-ARBEI[7,0]"
+    "Unidade trabalho": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-ARBEH[8,0]"
+    "Duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/txtPLPOD-DAUNO[10,0]"
+    "Unidade duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-DAUNE[11,0]"
 
 IP42:
   "SAPLIWP3|0100":

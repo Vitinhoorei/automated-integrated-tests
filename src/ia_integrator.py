@@ -7,7 +7,6 @@ import config
 
 from param_enricher import enrich_params
 
-
 class AITestIntegrator:
     """
     Responsabilidades:
@@ -120,7 +119,6 @@ class AITestIntegrator:
 
         normalized = self._normalize_error(tcode, status_message)
 
-        # ✅ erro já conhecido: usa .get com fallback
         if normalized in self.error_memory:
             prev = self.error_memory[normalized] or {}
             return {
@@ -160,7 +158,6 @@ class AITestIntegrator:
         except Exception:
             data = {}
 
-        # ✅ garante estrutura mínima
         data = {
             "causa_raiz": data.get("causa_raiz", "Erro não identificado"),
             "sugestao_correcao": data.get("sugestao_correcao", "Verificar mensagem SAP e evidência.")

@@ -44,9 +44,9 @@ def run_excel_tests(
     if not raw_sheet or raw_sheet.upper() == "ALL":
         target_sheets = list_sheet_names(work_xlsx)
     else:
-        target_sheets =[s.strip() for s in raw_sheet.split(",") if s.strip()]
+        target_sheets = [s.strip() for s in raw_sheet.split(",") if s.strip()]
 
-    rows =[]
+    rows = []
     processed_sheets = set()
 
     for sname in target_sheets:
@@ -65,18 +65,19 @@ def run_excel_tests(
             "RUN",
         )
         evidence_path = str(Path(cfg.evidence_dir) / fname)
-        
+
         smart_params = ai.preparar_parametros(
             item.tcode,
             item.explanation,
             item.parameter,
         )
-        
+
         result = sap.run_tcode(
             item.tcode,
             smart_params,
             item.explanation,
             evidence_path=evidence_path,
+            mode=item.mode,
         )
 
         if result.status == "PASS":
@@ -102,13 +103,13 @@ def run_excel_tests(
                 message=result.message,
                 suggested_fix="",
                 fix_confidence=100,
-                fix_justification="Execução concluída sem erros.",
+                fix_justification=f"Execução concluída sem erros. Modo: {item.mode}",
                 evidence_path=result.evidence_path,
             )
 
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} -> PASS | {result.message}"
+                f"{item.tcode} ({item.mode}) -> PASS | {result.message}"
             )
 
         else:
@@ -142,13 +143,13 @@ def run_excel_tests(
                 message=causa,
                 suggested_fix=sugestao,
                 fix_confidence=confianca,
-                fix_justification=justificativa,
+                fix_justification=f"{justificativa} | Modo: {item.mode}",
                 evidence_path=result.evidence_path,
             )
 
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} -> FAIL | {causa} | "
+                f"{item.tcode} ({item.mode}) -> FAIL | {causa} | "
                 f"Sugestão: {sugestao} | Confiança: {confianca}"
             )
 

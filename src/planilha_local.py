@@ -11,9 +11,10 @@ class SheetRow:
     sheet_name: str
     row_index: int
     scenario: str
-    tcode: str  
+    tcode: str
     explanation: str
     parameter: str
+    mode: str
 
 # UTILITÁRIOS
 def _norm(value: str) -> str:
@@ -41,6 +42,7 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     col_tcode = _find_col(header, "Transação", "Transacao", "TCODE", "Transaction")
     col_test_expl = _find_col(header, "Test Explanation", "Explanation", "Test", "Descricao")
     col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parameter")
+    col_mode = _find_col(header, "Modo", "Mode")
 
     rows: List[SheetRow] = []
     for r in range(2, ws.max_row + 1):
@@ -56,8 +58,9 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
         explanation = " - ".join(textos)
 
         parameter = (ws.cell(r, col_param).value or "").strip() if col_param else ""
+        mode = (ws.cell(r, col_mode).value or "real").strip() if col_mode else "real"
 
-        rows.append(SheetRow(sheet_name, r, scenario, tcode, explanation, parameter))
+        rows.append(SheetRow(sheet_name, r, scenario, tcode, explanation, parameter, mode))
 
     return rows
 
@@ -88,7 +91,7 @@ def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
         col_suggestion: "Suggested Fix",
         col_fix_conf: "Fix Confidence",
         col_fix_just: "Fix Justification",
-         col_evidence: "Evidence Path"
+        col_evidence: "Evidence Path"
     }
 
     for col, title in headers.items():
