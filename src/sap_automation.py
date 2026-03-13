@@ -347,7 +347,7 @@ class SapAutomation:
             time.sleep(0.8)
 
             ontem = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
-            hora_inicio_dt = datetime.strptime("13:00", "%H:%M")
+            hora_inicio_dt = datetime.strptime("16:00", "%H:%M")
             hora_fim_dt = hora_inicio_dt + timedelta(hours=2)
             hora_inicio = hora_inicio_dt.strftime("%H:%M")
             hora_fim = hora_fim_dt.strftime("%H:%M")
@@ -452,15 +452,16 @@ class SapAutomation:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
 
-    def _run_ip41_flow(self, parameters: dict, explanation: str, evidence_path: str = "") -> SapResult:
+    def _run_ip41_ip42_flow(self, tcode: str, parameters: dict, explanation: str, evidence_path: str = "") -> SapResult:
         """
-        Fluxo especial da IP41:
-        Preenche a tela inicial -> Abas -> Cria Lista de Tarefas -> Tabela -> Simulado ou Real
+        Fluxo especial Unificado da IP41 e IP42:
+        Preenche a tela inicial -> Abas -> Cria Lista de Tarefas -> Tabela -> PactsMt (Apenas IP42) -> Simulado ou Real
         """
         try:
+            tcode_u = tcode.upper()
             is_simulated = "simulado" in (explanation or "").lower()
             mapping = {}
-            for k, v in self.field_map.get("IP41", {}).items():
+            for k, v in self.field_map.get(tcode_u, {}).items():
                 if isinstance(v, dict):
                     mapping.update(v)
             mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
@@ -474,54 +475,99 @@ class SapAutomation:
             def get_id(key):
                 sap_id = mapping.get(key) or mapping_norm.get(self._norm_key(key))
                 if not sap_id:
-                    raise ValueError(f"Campo '{key}' não mapeado no field_map.yaml da IP41.")
+                    raise ValueError(f"ID não mapeado no YAML da {tcode_u} para o campo: {key}")
                 return sap_id
 
             def safe_set_text(key_name):
                 val = get_val(key_name)
                 if val:
-                    self.session.findById(get_id(key_name)).text = val
+                    try:
+                        self.session.findById(get_id(key_name)).text = val
+                    except Exception:
+                        raise Exception(f"Campo '{key_name}' não encontrado na tela. O SAP travou ou a tela não carregou.")
 
             def safe_set_key(key_name):
                 val = get_val(key_name)
                 if val:
-                    self.session.findById(get_id(key_name)).key = val
+                    try:
+                        self.session.findById(get_id(key_name)).key = val
+                    except Exception:
+                        raise Exception(f"Combo '{key_name}' não encontrado na tela. O SAP travou.")
 
-            ctg = get_val("Ctg.plano de manutenção") or get_val("Ctg.plano manut.")
+            ctg = get_val("Ctg.plano de manutenção") or get_val("Ctg.plano manutenção") or get_val("Ctg.plano manut.")
             if ctg:
-                self.session.findById(get_id("Ctg.plano de manutenção")).key = ctg
+                try:
+                    id_ctg = mapping.get("Ctg.plano manut.") or mapping.get("Ctg.plano de manutenção") or mapping_norm.get(self._norm_key("Ctg.plano manutenção"))
+                    self.session.findById(id_ctg).key = ctg
+                except Exception:
+                    raise Exception("Campo 'Ctg.plano de manutenção' não encontrado na tela inicial.")
+
+            if tcode_u == "IP42":
+                estra = get_val("Estratégia") or get_val("Estrategia")
+                if estra:
+                    try:
+                        self.session.findById(get_id("Estratégia")).text = estra
+                    except Exception:
+                        raise Exception("Campo 'Estratégia' não encontrado na tela inicial (IP42).")
+
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
-
-            safe_set_text("Texto do plano de manutenção")
-            safe_set_text("Ciclo")
-            safe_set_text("Unidade do ciclo")
+            val_texto = get_val("Texto do plano de manutenção") or get_val("Texto Breve")
+            if val_texto:
+                try:
+                    self.session.findById(get_id("Texto do plano de manutenção")).text = val_texto
+                except Exception:
+                    raise Exception("Campo 'Texto do plano de manutenção' não encontrado.")
+                
+            if tcode_u == "IP41":
+                safe_set_text("Ciclo")
+                safe_set_text("Unidade do ciclo")
+                
             safe_set_text("Local de instalação")
-            safe_set_text("Nº equipamento")
+            
+            val_equip = get_val("Nº equipamento") or get_val("Equipamento")
+            if val_equip:
+                try:
+                    self.session.findById(get_id("Nº equipamento")).text = val_equip
+                except Exception:
+                    raise Exception("Campo 'Nº equipamento' não encontrado.")
+                
             safe_set_text("Tipo de ordem")
             safe_set_text("Tipo de atividade de manutenção")
             
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
-            
             safe_set_key("Prioridade")
 
             try:
                 self.session.findById("wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\03").select()
                 time.sleep(0.5)
-                safe_set_key("Campo Ordenação")
-            except Exception:
+                
+                val_plan_sort = get_val("Tipo de programação") or get_val("Campo ordenação") or get_val("Campo ordenacao")
+                if val_plan_sort:
+                    try:
+                        self.session.findById(get_id("Campo Ordenação")).key = val_plan_sort
+                    except Exception:
+                        self.session.findById(get_id("Campo Ordenação")).value = val_plan_sort
+                
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.5)
+            except Exception as e:
                 pass
 
             self.session.findById("wnd[0]/usr/subSUBSCREEN_MPLAN:SAPLIWP3:8001/tabsTABSTRIP_HEAD/tabpT\\01").select()
             time.sleep(0.5)
-            self.session.findById(get_id("Criar lista de tarefas")).press()
-            time.sleep(0.8)
+            
+            try:
+                self.session.findById(get_id("Criar lista de tarefas")).press()
+            except Exception:
+                raise Exception("Botão 'Criar lista de tarefas' não encontrado.")
+            time.sleep(1.0)
             
             if self._popup_exists():
                 self.session.findById("wnd[1]/tbar[0]/btn[0]").press() 
                 time.sleep(0.8)
-                
+
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(1.0)
 
@@ -529,21 +575,44 @@ class SapAutomation:
             safe_set_text("Grupo de planejamento")
             safe_set_text("Status do plano")
             
-            self.session.findById("wnd[0]/tbar[1]/btn[16]").press()
-            time.sleep(0.8)
+            try:
+                self.session.findById("wnd[0]/tbar[1]/btn[16]").press()
+            except Exception:
+                raise Exception("Botão de Operações (btn[16]) não encontrado.")
+            time.sleep(1.0)
             
-            safe_set_text("Descrição da operação")
+            val_desc_op = get_val("Descrição da operação") or get_val("Descrição operação") or get_val("Texto Operação")
+            if val_desc_op:
+                try:
+                    self.session.findById(get_id("Descrição da operação")).text = val_desc_op
+                except Exception:
+                    raise Exception("Campo 'Descrição da operação' na tabela não encontrado.")
+                
             safe_set_text("Trabalho")
             safe_set_text("Unidade trabalho")
             safe_set_text("Duração")
             safe_set_text("Unidade duração")
-            
+
             self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(1.0)
+            time.sleep(1.2)
+            
+            if tcode_u == "IP42":
+                try:
+                    self.session.findById("wnd[0]/usr/tblSAPLCPDITCTRL_3400").getAbsoluteRow(0).selected = True
+                    time.sleep(0.3)
+                    self.session.findById("wnd[0]/usr/btnTEXT_DRUCKTASTE_WP").press()
+                    time.sleep(1.0)
+                    self.session.findById("wnd[0]/usr/tblSAPLCPDITCTRL_3600/chkRIHSTRAT-MARK01[3,0]").selected = True
+                    time.sleep(0.3)
+                    self.session.findById("wnd[0]/tbar[1]/btn[32]").press()
+                    time.sleep(1.0)
+                except Exception as e:
+                    raise Exception(f"Erro ao atribuir Pacotes de Manutenção (PactsMt) na IP42: {e}")
+
             ev = self._capture_success_evidence(evidence_path)
 
             if is_simulated:
-                msg = "Fluxo IP41 executado com sucesso. (SIMULADO - Operação cancelada no final)"
+                msg = f"Fluxo {tcode_u} executado com sucesso. (SIMULADO - Operação cancelada no final)"
                 try:
                     self.session.findById("wnd[0]/tbar[0]/btn[15]").press() 
                     time.sleep(0.5)
@@ -557,9 +626,8 @@ class SapAutomation:
                 except Exception:
                     pass
                 return SapResult("PASS", "OK", msg, ev)
-                
             else:
-                msg = "Fluxo IP41 executado e salvo com sucesso."
+                msg = f"Fluxo {tcode_u} executado e salvo com sucesso."
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
                 time.sleep(1.5)
                 
@@ -568,13 +636,13 @@ class SapAutomation:
 
                 if sb_type in {"E", "A", "X"}:
                     ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao salvar IP41", ev)
+                    return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao salvar {tcode_u}", ev)
                 
                 return SapResult("PASS", "OK", sb or msg, ev)
 
         except Exception as e:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-            return SapResult("FAIL", "EXCEPTION", f"Erro interno Python/COM no fluxo IP41: {type(e).__name__} - {e}", ev)
+            return SapResult("FAIL", "EXCEPTION", str(e), ev)
         
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         """
@@ -713,8 +781,11 @@ class SapAutomation:
             if tcode.upper() == "IW41":
                 return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
             
-            if tcode.upper() == "IP41":
-                return self._run_ip41_flow(parameters, explanation, evidence_path)
+            if tcode.upper() == "IW41":
+                return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
+            
+            if tcode.upper() in ["IP41", "IP42"]:
+                return self._run_ip41_ip42_flow(tcode, parameters, explanation, evidence_path)
 
             params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
             popup_msgs = []

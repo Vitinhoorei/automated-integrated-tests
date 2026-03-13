@@ -43,7 +43,10 @@ PARAM_ALIASES = {
     "TEXTO PLANO DE MANUTENCAO": "Texto do plano de manutenção",
     "DESCRICAO DA OPERACAO": "Descrição da operação",
     "CAMPO ORDENAÇÃO": "Campo seleção p/planos de manutenção",
-    
+
+    "ESTRATÉGIA DE MANUTENÇÃO": "Estratégia",
+    "ESTRATEGIA DE MANUTENCAO": "Estratégia",
+    "ESTRATEGIA": "Estratégia",
 }
 
 def remove_acento(txt: str) -> str:
