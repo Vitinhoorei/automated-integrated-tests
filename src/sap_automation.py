@@ -323,6 +323,55 @@ class SapAutomation:
                 time.sleep(0.5)
             except Exception:
                 pass
+    
+    def _handle_iw21_z4_popup(self, parameters: dict[str, str]) -> bool:
+        """
+        Se for nota Z4 e aparecer popup na IW21, tenta clicar em Avançar.
+        """
+        try:
+            if self._screen_key() != "SAPLIQS0|0100":
+                return False
+
+            tipo_nota = self._get_param_value(parameters, "Tipo de nota").upper().strip()
+            if tipo_nota != "Z4":
+                return False
+
+            if not self._popup_exists():
+                return False
+
+            iw21_maps = self.field_map.get("IW21", {})
+            popup_map = iw21_maps.get("POPUP_Z4", {}) if isinstance(iw21_maps, dict) else {}
+            avancar_id = ""
+            if isinstance(popup_map, dict):
+                avancar_id = popup_map.get("Avançar", "") or popup_map.get("Avancar", "")
+
+            candidates = []
+            if avancar_id:
+                candidates.append(avancar_id)
+
+            candidates.extend([
+                "wnd[1]/tbar[0]/btn[0]",
+                "wnd[1]/usr/btnBUTTON_1",
+                "wnd[1]/usr/btnSPOP-OPTION1",
+            ])
+
+            for obj_id in candidates:
+                try:
+                    self.session.findById(obj_id).press()
+                    time.sleep(0.8)
+                    return True
+                except Exception:
+                    continue
+
+            try:
+                self.session.findById("wnd[1]").sendVKey(0)
+                time.sleep(0.8)
+                return True
+            except Exception:
+                return False
+
+        except Exception:
+            return False
 
     def _handle_iw21_z4_popup(self, parameters: dict[str, str]) -> bool:
         """
@@ -884,15 +933,12 @@ class SapAutomation:
             if tcode.upper() == "IW41":
                 return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
             
-            if tcode.upper() == "IW41":
-                return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
-            
             if tcode.upper() in ["IP41", "IP42"]:
                 return self._run_ip41_ip42_flow(tcode, parameters, explanation, evidence_path)
 
             params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
             popup_msgs = []
-            max_telas = 10
+            max_telas = 15
             tela_atual = 0
 
             has_order_operation_flow = tcode.upper() in {"IW31", "IW34"} and bool(
