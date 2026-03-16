@@ -31,6 +31,7 @@ def _find_col(header_row, *names: str) -> Optional[int]:
 # LEITURA
 def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     wb = load_workbook(xlsx_path)
+
     if sheet_name not in wb.sheetnames:
         raise ValueError(f"Aba '{sheet_name}' não existe.")
 
@@ -43,8 +44,8 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     col_test_expl = _find_col(header, "Test Explanation", "Explanation", "Test", "Descricao")
     col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parameter")
     col_mode = _find_col(header, "Modo", "Mode")
-
     rows: List[SheetRow] = []
+
     for r in range(2, ws.max_row + 1):
         tcode = (ws.cell(r, col_tcode).value or "").strip() if col_tcode else ""
         if not tcode:
@@ -60,10 +61,19 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
         parameter = (ws.cell(r, col_param).value or "").strip() if col_param else ""
         mode = (ws.cell(r, col_mode).value or "real").strip() if col_mode else "real"
 
-        rows.append(SheetRow(sheet_name, r, scenario, tcode, explanation, parameter, mode))
+        rows.append(
+            SheetRow(
+                sheet_name,
+                r,
+                scenario,
+                tcode,
+                explanation,
+                parameter,
+                mode
+            )
+        )
 
     return rows
-
 
 def list_sheet_names(xlsx_path: str) -> List[str]:
     return list(load_workbook(xlsx_path).sheetnames)
@@ -73,8 +83,8 @@ def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
     wb = load_workbook(xlsx_path)
     ws = wb[sheet_name]
     header = list(ws.iter_rows(min_row=1, max_row=1, values_only=False))[0]
-
     col_status = _find_col(header, "Status")
+
     if not col_status:
         raise ValueError("Coluna 'Status' não encontrada.")
 
@@ -104,46 +114,13 @@ def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
         "status": col_status,
         "source": col_source,
         "message": col_message,
-        "evidence": col_evidence,
         "suggestion": col_suggestion,
         "fix_confidence": col_fix_conf,
         "fix_justification": col_fix_just,
+        "evidence": col_evidence,
     }
 
-# ESCRITA (LEGADO)
-def write_status_triplet(
-    xlsx_path: str,
-    sheet_name: str,
-    row_index: int,
-    status: str,
-    source: str,
-    message: str,
-    evidence_path: str | None = None,
-    suggestion: str = "",
-) -> None:
-    cols = ensure_status_columns(xlsx_path, sheet_name)
-    wb = load_workbook(xlsx_path)
-    ws = wb[sheet_name]
-
-    ws.cell(row_index, cols["status"]).value = status
-    ws.cell(row_index, cols["source"]).value = source
-    ws.cell(row_index, cols["message"]).value = message
-
-    ws.cell(row_index, cols["message"]).alignment = Alignment(wrap_text=True)
-    ws.cell(row_index, cols["source"]).alignment = Alignment(wrap_text=True)
-
-    ws.cell(row_index, cols["suggestion"]).value = suggestion
-    ws.cell(row_index, cols["suggestion"]).alignment = Alignment(wrap_text=True)
-
-    if evidence_path:
-        ev_cell = ws.cell(row_index, cols["evidence"])
-        ev_cell.value = evidence_path
-        ev_cell.hyperlink = evidence_path
-        ev_cell.style = "Hyperlink"
-
-    wb.save(xlsx_path)
-
-# ESCRITA (NOVA — CORRETA)
+# ESCRITA COMPLETA
 def write_status_with_fix_details(
     xlsx_path: str,
     sheet_name: str,
@@ -155,7 +132,8 @@ def write_status_with_fix_details(
     fix_confidence: int,
     fix_justification: str,
     evidence_path: str | None = None,
-) -> None:
+):
+
     cols = ensure_status_columns(xlsx_path, sheet_name)
     wb = load_workbook(xlsx_path)
     ws = wb[sheet_name]
@@ -163,13 +141,13 @@ def write_status_with_fix_details(
     ws.cell(row_index, cols["status"]).value = status
     ws.cell(row_index, cols["source"]).value = source
     ws.cell(row_index, cols["message"]).value = message
-
     ws.cell(row_index, cols["suggestion"]).value = suggested_fix
     ws.cell(row_index, cols["fix_confidence"]).value = fix_confidence
     ws.cell(row_index, cols["fix_justification"]).value = fix_justification
-
-    for key in ("message", "suggestion", "fix_justification"):
-        ws.cell(row_index, cols[key]).alignment = Alignment(wrap_text=True, vertical="top")
+    align = Alignment(vertical="top", wrap_text=True)
+    ws.cell(row_index, cols["message"]).alignment = align
+    ws.cell(row_index, cols["suggestion"]).alignment = align
+    ws.cell(row_index, cols["fix_justification"]).alignment = align
 
     if evidence_path:
         ev_cell = ws.cell(row_index, cols["evidence"])
@@ -179,60 +157,96 @@ def write_status_with_fix_details(
 
     wb.save(xlsx_path)
 
-# FORMATAÇÃO
-def format_output_sheet(xlsx_path: str, sheet_name: str) -> None:
+# AUTO AJUSTE DE COLUNA
+def _auto_adjust_columns(ws):
+
+    for column in ws.columns:
+
+        max_length = 0
+        column = list(column)
+        letter = column[0].column_letter
+
+        for cell in column:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+
+        adjusted = min(max_length + 3, 80)
+
+        ws.column_dimensions[letter].width = adjusted
+
+# FORMATAÇÃO DA PLANILHA
+def format_output_sheet(xlsx_path: str, sheet_name: str):
+
     cols = ensure_status_columns(xlsx_path, sheet_name)
     wb = load_workbook(xlsx_path)
     ws = wb[sheet_name]
-
-    max_col = ws.max_column
     max_row = ws.max_row
+    max_col = ws.max_column
 
-    header_fill = PatternFill(fill_type="solid", fgColor="1F4E78")
+    header_fill = PatternFill("solid", fgColor="00579F")
     header_font = Font(color="FFFFFF", bold=True)
-    thin_border = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
+
+    pass_fill = PatternFill("solid", fgColor="C6EFCE")
+    fail_fill = PatternFill("solid", fgColor="FFC7CE")
+
+    zebra_fill = PatternFill("solid", fgColor="F7F9FB")
+
+    border = Border(
+        left=Side(style="thin", color="DDDDDD"),
+        right=Side(style="thin", color="DDDDDD"),
+        top=Side(style="thin", color="DDDDDD"),
+        bottom=Side(style="thin", color="DDDDDD"),
     )
 
+    # CABEÇALHO
     for c in range(1, max_col + 1):
+
         cell = ws.cell(1, c)
+
         cell.fill = header_fill
         cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = thin_border
+        cell.border = border
 
-    ws.row_dimensions[1].height = 24
+        cell.alignment = Alignment(
+            horizontal="left",
+            vertical="center",
+            wrap_text=False
+        )
+
     ws.freeze_panes = "A2"
+    ws.row_dimensions[1].height = 22
+
+    # LINHAS
+    for r in range(2, max_row + 1):
+
+        status = (ws.cell(r, cols["status"]).value or "").upper()
+
+        for c in range(1, max_col + 1):
+
+            cell = ws.cell(r, c)
+
+            cell.border = border
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+
+            if r % 2 == 0:
+                cell.fill = zebra_fill
+
+        if status == "PASS":
+
+            ws.cell(r, cols["status"]).fill = pass_fill
+
+        if status == "FAIL":
+
+            for c in range(1, max_col + 1):
+                ws.cell(r, c).fill = fail_fill
+
+    # FILTRO
     ws.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
 
-    pass_fill = PatternFill(fill_type="solid", fgColor="E2F0D9")
-    fail_fill = PatternFill(fill_type="solid", fgColor="FCE4D6")
-
-    for r in range(2, max_row + 1):
-        st = (ws.cell(r, cols["status"]).value or "").strip().upper()
-        for c in range(1, max_col + 1):
-            ws.cell(r, c).border = thin_border
-
-        if st == "PASS":
-            ws.cell(r, cols["status"]).fill = pass_fill
-        elif st == "FAIL":
-            for key in ("status", "message", "suggestion"):
-                ws.cell(r, cols[key]).fill = fail_fill
-
-    preferred = {
-        cols["status"]: 10,
-        cols["source"]: 18,
-        cols["message"]: 60,
-        cols["suggestion"]: 45,
-        cols["fix_confidence"]: 15,
-        cols["fix_justification"]: 60,
-        cols["evidence"]: 45,
-    }
-
-    for c in range(1, max_col + 1):
-        ws.column_dimensions[get_column_letter(c)].width = preferred.get(c, 15)
+    # AUTO AJUSTE
+    _auto_adjust_columns(ws)
 
     wb.save(xlsx_path)
