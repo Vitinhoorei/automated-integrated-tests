@@ -53,6 +53,8 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         "ctg plano de manutencao": "Ctg.plano de manutenção",
         "descricao da operacao": "Descrição da operação",
         "campo ordenacao": "Campo Ordenação",
+        "estrategia de manutencao": "Estratégia",
+        "estrategia": "Estratégia",
     }
 
     normalized: dict[str, str] = {}
