@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
+
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
 
 # MODELO DE LINHA
 @dataclass
@@ -16,9 +19,10 @@ class SheetRow:
     parameter: str
     mode: str
 
+
 # UTILITÁRIOS
 def _norm(value: str) -> str:
-    return (value or "").strip().lower()
+    return str(value or "").strip().lower()
 
 
 def _find_col(header_row, *names: str) -> Optional[int]:
@@ -27,6 +31,29 @@ def _find_col(header_row, *names: str) -> Optional[int]:
         if _norm(cell.value) in wanted:
             return idx
     return None
+
+
+def _normalize_mode(value: str) -> str:
+    mode = _norm(value)
+
+    if not mode:
+        return ""
+
+    aliases = {
+        "executar": "executar",
+        "exec": "executar",
+        "real": "executar",
+
+        "simulado": "simulado",
+        "simulada": "simulado",
+        "simulacao": "simulado",
+        "simulação": "simulado",
+        "simulate": "simulado",
+        "teste": "simulado",
+    }
+
+    return aliases.get(mode, mode)
+
 
 # LEITURA
 def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
@@ -46,19 +73,22 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
 
     rows: List[SheetRow] = []
     for r in range(2, ws.max_row + 1):
-        tcode = (ws.cell(r, col_tcode).value or "").strip() if col_tcode else ""
+        tcode_raw = ws.cell(r, col_tcode).value if col_tcode else ""
+        tcode = str(tcode_raw or "").strip()
         if not tcode:
             continue
 
-        scenario = (ws.cell(r, col_scenario).value or "").strip() if col_scenario else ""
-        scen_expl = (ws.cell(r, col_scen_expl).value or "").strip() if col_scen_expl else ""
-        test_expl = (ws.cell(r, col_test_expl).value or "").strip() if col_test_expl else ""
+        scenario = str(ws.cell(r, col_scenario).value or "").strip() if col_scenario else ""
+        scen_expl = str(ws.cell(r, col_scen_expl).value or "").strip() if col_scen_expl else ""
+        test_expl = str(ws.cell(r, col_test_expl).value or "").strip() if col_test_expl else ""
 
         textos = [txt for txt in [scen_expl, test_expl] if txt]
         explanation = " - ".join(textos)
 
-        parameter = (ws.cell(r, col_param).value or "").strip() if col_param else ""
-        mode = (ws.cell(r, col_mode).value or "real").strip() if col_mode else "real"
+        parameter = str(ws.cell(r, col_param).value or "").strip() if col_param else ""
+
+        raw_mode = ws.cell(r, col_mode).value if col_mode else ""
+        mode = _normalize_mode(raw_mode)
 
         rows.append(SheetRow(sheet_name, r, scenario, tcode, explanation, parameter, mode))
 
@@ -67,6 +97,7 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
 
 def list_sheet_names(xlsx_path: str) -> List[str]:
     return list(load_workbook(xlsx_path).sheetnames)
+
 
 # COLUNAS DE STATUS
 def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
@@ -110,6 +141,7 @@ def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
         "fix_justification": col_fix_just,
     }
 
+
 # ESCRITA (LEGADO)
 def write_status_triplet(
     xlsx_path: str,
@@ -142,6 +174,7 @@ def write_status_triplet(
         ev_cell.style = "Hyperlink"
 
     wb.save(xlsx_path)
+
 
 # ESCRITA (NOVA — CORRETA)
 def write_status_with_fix_details(
@@ -178,6 +211,7 @@ def write_status_with_fix_details(
         ev_cell.style = "Hyperlink"
 
     wb.save(xlsx_path)
+
 
 # FORMATAÇÃO
 def format_output_sheet(xlsx_path: str, sheet_name: str) -> None:

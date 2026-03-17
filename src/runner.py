@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import uuid
+import re
 import shutil
+import uuid
 from pathlib import Path
 
 from config import AppConfig
+from evidence import ensure_dir, evidence_filename
+from ia_integrator import AITestIntegrator
 from planilha_local import (
     format_output_sheet,
     list_sheet_names,
@@ -12,9 +15,7 @@ from planilha_local import (
     write_status_with_fix_details,
 )
 from sap_automation import SapAutomation
-from evidence import ensure_dir, evidence_filename
 from sap_screen_dump import dump_screen
-from ia_integrator import AITestIntegrator
 
 
 def _copy_to_output(original_path: str, output_dir: str) -> str:
@@ -56,7 +57,18 @@ def run_excel_tests(
         except ValueError as e:
             print(f"[SKIP] Aba '{sname}' ignorada: {e}")
 
+    valid_modes = {"executar", "simulado"}
+
     for item in rows:
+        mode = (item.mode or "").strip().lower()
+
+        if mode not in valid_modes:
+            print(
+                f"[{item.sheet_name} r{item.row_index}] "
+                f"{item.tcode} -> SKIP | modo vazio ou inválido: '{item.mode}'"
+            )
+            continue
+
         fname = evidence_filename(
             exec_id,
             item.sheet_name,
@@ -77,14 +89,13 @@ def run_excel_tests(
             smart_params,
             item.explanation,
             evidence_path=evidence_path,
-            mode=item.mode,
+            mode=mode,
         )
 
         if result.status == "PASS":
             ai.extrair_id_integrado(item.tcode, result.message)
 
             msg_lower = result.message.lower()
-            import re
             if "nota" in msg_lower or "aviso" in msg_lower:
                 match = re.search(r"(?:nota|aviso)\s+(\d+)", msg_lower)
                 if match:
@@ -103,13 +114,13 @@ def run_excel_tests(
                 message=result.message,
                 suggested_fix="",
                 fix_confidence=100,
-                fix_justification=f"Execução concluída sem erros. Modo: {item.mode}",
+                fix_justification=f"Execução concluída sem erros. Modo: {mode}",
                 evidence_path=result.evidence_path,
             )
 
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} ({item.mode}) -> PASS | {result.message}"
+                f"{item.tcode} ({mode}) -> PASS | {result.message}"
             )
 
         else:
@@ -143,13 +154,13 @@ def run_excel_tests(
                 message=causa,
                 suggested_fix=sugestao,
                 fix_confidence=confianca,
-                fix_justification=f"{justificativa} | Modo: {item.mode}",
+                fix_justification=f"{justificativa} | Modo: {mode}",
                 evidence_path=result.evidence_path,
             )
 
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} ({item.mode}) -> FAIL | {causa} | "
+                f"{item.tcode} ({mode}) -> FAIL | {causa} | "
                 f"Sugestão: {sugestao} | Confiança: {confianca}"
             )
 
