@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
+
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
 
 # MODELO DE LINHA
 @dataclass
@@ -16,9 +19,10 @@ class SheetRow:
     parameter: str
     mode: str
 
+
 # UTILITÁRIOS
 def _norm(value: str) -> str:
-    return (value or "").strip().lower()
+    return str(value or "").strip().lower()
 
 
 def _find_col(header_row, *names: str) -> Optional[int]:
@@ -27,6 +31,29 @@ def _find_col(header_row, *names: str) -> Optional[int]:
         if _norm(cell.value) in wanted:
             return idx
     return None
+
+
+def _normalize_mode(value: str) -> str:
+    mode = _norm(value)
+
+    if not mode:
+        return ""
+
+    aliases = {
+        "executar": "executar",
+        "exec": "executar",
+        "real": "executar",
+
+        "simulado": "simulado",
+        "simulada": "simulado",
+        "simulacao": "simulado",
+        "simulação": "simulado",
+        "simulate": "simulado",
+        "teste": "simulado",
+    }
+
+    return aliases.get(mode, mode)
+
 
 # LEITURA
 def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
@@ -44,22 +71,25 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     col_test_expl = _find_col(header, "Test Explanation", "Explanation", "Test", "Descricao")
     col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parameter")
     col_mode = _find_col(header, "Modo", "Mode")
-    rows: List[SheetRow] = []
+    rows: List[SheetRow] =[]
 
     for r in range(2, ws.max_row + 1):
-        tcode = (ws.cell(r, col_tcode).value or "").strip() if col_tcode else ""
+        tcode_raw = ws.cell(r, col_tcode).value if col_tcode else ""
+        tcode = str(tcode_raw or "").strip()
         if not tcode:
             continue
 
-        scenario = (ws.cell(r, col_scenario).value or "").strip() if col_scenario else ""
-        scen_expl = (ws.cell(r, col_scen_expl).value or "").strip() if col_scen_expl else ""
-        test_expl = (ws.cell(r, col_test_expl).value or "").strip() if col_test_expl else ""
+        scenario = str(ws.cell(r, col_scenario).value or "").strip() if col_scenario else ""
+        scen_expl = str(ws.cell(r, col_scen_expl).value or "").strip() if col_scen_expl else ""
+        test_expl = str(ws.cell(r, col_test_expl).value or "").strip() if col_test_expl else ""
 
-        textos = [txt for txt in [scen_expl, test_expl] if txt]
+        textos = [txt for txt in[scen_expl, test_expl] if txt]
         explanation = " - ".join(textos)
 
-        parameter = (ws.cell(r, col_param).value or "").strip() if col_param else ""
-        mode = (ws.cell(r, col_mode).value or "real").strip() if col_mode else "real"
+        parameter = str(ws.cell(r, col_param).value or "").strip() if col_param else ""
+
+        raw_mode = ws.cell(r, col_mode).value if col_mode else ""
+        mode = _normalize_mode(raw_mode)
 
         rows.append(
             SheetRow(
@@ -77,6 +107,7 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
 
 def list_sheet_names(xlsx_path: str) -> List[str]:
     return list(load_workbook(xlsx_path).sheetnames)
+
 
 # COLUNAS DE STATUS
 def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
@@ -120,7 +151,42 @@ def ensure_status_columns(xlsx_path: str, sheet_name: str) -> dict:
         "evidence": col_evidence,
     }
 
-# ESCRITA COMPLETA
+
+# ESCRITA (LEGADO - Mantido para compatibilidade com a main)
+def write_status_triplet(
+    xlsx_path: str,
+    sheet_name: str,
+    row_index: int,
+    status: str,
+    source: str,
+    message: str,
+    evidence_path: str | None = None,
+    suggestion: str = "",
+) -> None:
+    cols = ensure_status_columns(xlsx_path, sheet_name)
+    wb = load_workbook(xlsx_path)
+    ws = wb[sheet_name]
+
+    ws.cell(row_index, cols["status"]).value = status
+    ws.cell(row_index, cols["source"]).value = source
+    ws.cell(row_index, cols["message"]).value = message
+
+    ws.cell(row_index, cols["message"]).alignment = Alignment(wrap_text=True)
+    ws.cell(row_index, cols["source"]).alignment = Alignment(wrap_text=True)
+
+    ws.cell(row_index, cols["suggestion"]).value = suggestion
+    ws.cell(row_index, cols["suggestion"]).alignment = Alignment(wrap_text=True)
+
+    if evidence_path:
+        ev_cell = ws.cell(row_index, cols["evidence"])
+        ev_cell.value = evidence_path
+        ev_cell.hyperlink = evidence_path
+        ev_cell.style = "Hyperlink"
+
+    wb.save(xlsx_path)
+
+
+# ESCRITA (COMPLETA - NOVA)
 def write_status_with_fix_details(
     xlsx_path: str,
     sheet_name: str,
@@ -133,7 +199,6 @@ def write_status_with_fix_details(
     fix_justification: str,
     evidence_path: str | None = None,
 ):
-
     cols = ensure_status_columns(xlsx_path, sheet_name)
     wb = load_workbook(xlsx_path)
     ws = wb[sheet_name]
@@ -157,11 +222,10 @@ def write_status_with_fix_details(
 
     wb.save(xlsx_path)
 
+
 # AUTO AJUSTE DE COLUNA
 def _auto_adjust_columns(ws):
-
     for column in ws.columns:
-
         max_length = 0
         column = list(column)
         letter = column[0].column_letter
@@ -174,12 +238,11 @@ def _auto_adjust_columns(ws):
                 pass
 
         adjusted = min(max_length + 3, 80)
-
         ws.column_dimensions[letter].width = adjusted
 
-# FORMATAÇÃO DA PLANILHA
-def format_output_sheet(xlsx_path: str, sheet_name: str):
 
+# FORMATAÇÃO DA PLANILHA
+def format_output_sheet(xlsx_path: str, sheet_name: str) -> None:
     cols = ensure_status_columns(xlsx_path, sheet_name)
     wb = load_workbook(xlsx_path)
     ws = wb[sheet_name]
@@ -203,13 +266,10 @@ def format_output_sheet(xlsx_path: str, sheet_name: str):
 
     # CABEÇALHO
     for c in range(1, max_col + 1):
-
         cell = ws.cell(1, c)
-
         cell.fill = header_fill
         cell.font = header_font
         cell.border = border
-
         cell.alignment = Alignment(
             horizontal="left",
             vertical="center",
@@ -221,13 +281,10 @@ def format_output_sheet(xlsx_path: str, sheet_name: str):
 
     # LINHAS
     for r in range(2, max_row + 1):
-
         status = (ws.cell(r, cols["status"]).value or "").upper()
 
         for c in range(1, max_col + 1):
-
             cell = ws.cell(r, c)
-
             cell.border = border
             cell.alignment = Alignment(vertical="top", wrap_text=True)
 
@@ -235,11 +292,9 @@ def format_output_sheet(xlsx_path: str, sheet_name: str):
                 cell.fill = zebra_fill
 
         if status == "PASS":
-
             ws.cell(r, cols["status"]).fill = pass_fill
 
         if status == "FAIL":
-
             for c in range(1, max_col + 1):
                 ws.cell(r, c).fill = fail_fill
 

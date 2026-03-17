@@ -1,4 +1,3 @@
-
 = 🤖 SAP AI-Driven Automation Tester
 :icons: font
 :toc: left
@@ -11,124 +10,313 @@ link:#portugues[🇧🇷 Português] | link:#english[🇺🇸 English]
 == 🇧🇷 Versão em Português
 
 === 📝 Descrição
-O **SAP AI-Driven Automation Tester** é uma solução avançada desenvolvida em Python para automatizar testes integrados no sistema SAP (focado no módulo PM). O sistema combina a robustez da automação de interface (SAP GUI Scripting) com a inteligência de modelos de linguagem (GPT-4o-mini). Ele é capaz de interpretar cenários de teste, executar transações, gerenciar evidências e, o mais importante, analisar falhas técnicas e *dumps* para sugerir correções imediatas.
+
+O **SAP AI-Driven Automation Tester** é uma solução desenvolvida em **Python** para automatizar testes integrados no sistema **SAP**, com foco em processos do módulo **PM (Plant Maintenance)**.
+
+O sistema combina:
+
+* **Automação de Interface SAP GUI (SAP GUI Scripting)**
+* **Processamento com Inteligência Artificial**
+* **Execução automatizada de cenários de teste**
+* **Captura estruturada de evidências**
+
+A ferramenta é capaz de:
+
+* interpretar cenários definidos em **planilhas Excel**
+* executar **transações SAP automaticamente**
+* capturar **prints e evidências**
+* identificar **erros técnicos ou dumps**
+* gerar **relatórios estruturados**
+
+---
 
 === 🎯 Problema e Impacto
-Tradicionalmente, a validação de fluxos de manutenção no SAP exigia semanas de esforço manual para execução de testes e coleta de evidências.
 
-* **Cenário Anterior:** O ciclo de testes manuais durava em torno de **6 semanas**.
-* **Solução:** Com a automação inteligente, este tempo foi reduzido para **2 dias no máximo**.
-* **Ganho:** Uma redução de mais de **95% no tempo operacional**, eliminando erros humanos de digitação e padronizando as evidências para auditoria.
+Tradicionalmente, a validação de fluxos de manutenção no SAP exige grande esforço manual.
 
-=== ⚙️ Funcionalidades Mínimas
-* **Integração SAP GUI:** Automação nativa via protocolo de scripting.
-* **Cérebro GenAI:** Análise de causa raiz de erros e *dumps* em tempo real.
-* **Memória de Contexto:** Reaproveitamento de IDs gerados (ex: Notas e Ordens) entre diferentes transações.
-* **Captura de Evidências:** Geração automática de prints e *screen dumps* estruturados.
-* **Relatório Inteligente:** Output em Excel com formatação condicional e sugestões da IA.
+**Cenário anterior**
 
-=== 🗂️ Requisitos Funcionais
-**1️⃣ Preparação de Parâmetros (IA)**
-* O sistema deve processar descrições em linguagem natural e converter em campos técnicos do SAP.
-* Deve normalizar aliases (Ex: "LI" vira "Local de Instalação").
+* Execução manual de testes
+* Captura manual de evidências
+* Alto risco de erro humano
 
-**2️⃣ Execução de TCODEs**
-* O robô deve ser capaz de navegar por transações (Ex: IW21, IW31, IP41) e preencher campos dinamicamente.
+O ciclo completo de testes podia levar cerca de:
 
-**3️⃣ Extração de IDs Integrados**
-* Ao finalizar uma transação com sucesso, o sistema deve extrair o ID gerado (Ex: Nota 1002345) para uso em passos subsequentes.
+**6 semanas**
 
-**4️⃣ Análise de Erros e Dumps**
-* Em caso de falha, o sistema deve realizar um *dump* da árvore de objetos da tela e enviar à IA para diagnóstico.
+**Com a automação**
 
-=== ⚙️ Passo a passo para rodar o projeto
+O sistema executa os testes automaticamente e gera as evidências.
 
-* 1️⃣ **Clone o repositório**
+O tempo foi reduzido para aproximadamente:
+
+**até 2 dias**
+
+**Resultado**
+
+Redução superior a **95% no tempo operacional**, além de:
+
+* padronização das evidências
+* redução de erros humanos
+* maior rastreabilidade dos testes
+
+---
+
+=== ⚙️ Funcionalidades Principais
+
+* **Integração SAP GUI**  
+Automação nativa utilizando **SAP GUI Scripting (win32com)**.
+
+* **Execução Automática de Transações**  
+Execução automática de TCODEs com preenchimento de campos.
+
+* **Captura de Evidências**  
+Geração automática de prints de tela e dumps estruturados.
+
+* **Memória de Contexto**  
+Reutilização de IDs gerados (ex: Notas ou Ordens) em etapas posteriores.
+
+* **Relatório Inteligente**  
+Geração de relatórios em **Excel** com logs detalhados.
+
+* **Análise de Erros**  
+Em caso de erro ou dump SAP, o sistema coleta evidências e envia para análise.
+
+---
+
+=== 🧩 Transações SAP Automatizadas
+
+Atualmente o sistema executa cenários envolvendo as seguintes transações:
+
+* IW21
+* IW31
+* IW32
+* IW34
+* IW41
+* IP41
+* IP42
+
+Essas transações fazem parte dos fluxos de **manutenção e planejamento no SAP PM**.
+
+---
+
+=== ⚙️ Como Executar o Projeto
+
+==== 1️⃣ Clonar o repositório
+
 [source,bash]
 ----
-git clone https://github.com/veleoterio/sap-ai-tester.git
-cd sap-ai-tester
+git clone https://github.com/Vitinhoorei/automated-integrated-tests.git
+cd automated-integrated-tests
 ----
 
-* 2️⃣ **Instale as dependências**
+==== 2️⃣ Criar ambiente virtual
+
 [source,bash]
 ----
-pip install openpyxl pywin32 pyyaml pillow requests python-dotenv
+python -m venv venv
 ----
 
-* 3️⃣ **Execute o sistema via Terminal (VS Code)**
+Ativar o ambiente:
+
+Windows
+
+[source,bash]
+----
+venv\Scripts\activate
+----
+
+Linux / Mac
+
+[source,bash]
+----
+source venv/bin/activate
+----
+
+==== 3️⃣ Instalar dependências
+
+As dependências estão definidas no arquivo **requirements.txt**
+
+[source,bash]
+----
+pip install -r requirements.txt
+----
+
+==== 4️⃣ Executar o sistema
+
 [source,powershell]
 ----
-py src/main.py --file "c:\caminho\para\seu\arquivo.xlsx" --sheet "NomeDaAba"
+python src/main.py --file "c:\caminho\para\arquivo.xlsx" --sheet "NomeDaAba"
 ----
 
-'''
+Exemplo:
+
+[source,powershell]
+----
+python src/main.py --file "C:\Users\veleoterio\Downloads\Cenarios_PM.xlsx" --sheet "Testes unitarios"
+----
+
+---
 
 [#english]
 == 🇺🇸 English Version
 
 === 📝 Description
-The **SAP AI-Driven Automation Tester** is an advanced Python-based solution designed to automate integrated tests within the SAP system (focusing on the PM module). The system combines the robustness of interface automation (SAP GUI Scripting) with the intelligence of Large Language Models (GPT-4o-mini). It interprets test scenarios, executes transactions, manages evidence, and analyzes technical failures and *dumps* to provide immediate fix suggestions.
 
+The **SAP AI-Driven Automation Tester** is a **Python-based automation framework** designed to execute integrated tests within the **SAP system**, focusing on the **Plant Maintenance (PM)** module.
 
+The solution combines:
+
+* **SAP GUI interface automation**
+* **Artificial Intelligence**
+* **Automated execution of test scenarios**
+* **Structured evidence collection**
+
+The system can:
+
+* interpret **Excel-based test scenarios**
+* execute **SAP transactions automatically**
+* capture **screenshots and technical dumps**
+* analyze **errors and system failures**
+* generate **structured Excel reports**
+
+---
 
 === 🎯 Problem and Impact
-Traditionally, validating maintenance flows in SAP required weeks of manual effort for test execution and evidence collection.
 
-* **Previous Scenario:** The manual test cycle lasted approximately **6 weeks**.
-* **Solution:** With smart automation, this time was reduced to a **maximum of 2 days**.
-* **Gain:** A reduction of over **95% in operational time**, eliminating human typing errors and standardizing evidence for auditing.
+Traditionally, validating SAP maintenance flows required a significant amount of manual work.
+
+**Previous scenario**
+
+* Manual execution of transactions
+* Manual evidence collection
+* High risk of human errors
+
+A complete testing cycle could take around:
+
+**6 weeks**
+
+**With automation**
+
+The automated system executes scenarios and captures all required evidence.
+
+Execution time was reduced to approximately:
+
+**2 days**
+
+**Result**
+
+More than **95% reduction in operational time**, along with:
+
+* standardized evidence
+* reduced human errors
+* improved test traceability
+
+---
 
 === ⚙️ Key Features
-* **SAP GUI Integration:** Native automation via scripting protocol.
-* **GenAI Engine:** Real-time root cause analysis for errors and system dumps.
-* **Context Memory:** Reuses generated IDs (e.g., Notifications and Orders) across different transactions.
-* **Evidence Capture:** Automated generation of screenshots and structured *screen dumps*.
-* **Smart Reporting:** Excel output with conditional formatting and AI-powered fix suggestions.
 
-=== 🗂️ Functional Requirements
-**1️⃣ Parameter Preparation (AI)**
-* The system processes natural language descriptions and converts them into technical SAP fields.
-* Normalizes aliases (e.g., "LI" becomes "Install. Location").
+* **SAP GUI Integration**  
+Native automation using **SAP GUI Scripting (win32com)**.
 
-**2️⃣ TCODE Execution**
-* The robot navigates through transactions (e.g., IW21, IW31, IP41) and fills fields dynamically.
+* **Automatic Transaction Execution**
 
-**3️⃣ Integrated ID Extraction**
-* Upon successful transaction completion, the system extracts the generated ID (e.g., Notification 1002345) for subsequent steps.
+* **Evidence Capture**
+Automated screenshots and structured screen dumps.
 
-**4️⃣ Error and Dump Analysis**
-* In case of failure, the system performs an object tree dump of the screen and sends it to the AI for diagnosis.
+* **Context Memory**
+Reuses generated IDs (e.g., Notifications or Orders) between steps.
 
-=== ⚙️ Step-by-Step Execution
+* **Smart Reporting**
+Excel output with detailed logs.
 
-* 1️⃣ **Clone the repository**
+* **Error Analysis**
+Technical failures and dumps can be analyzed automatically.
+
+---
+
+=== 🧩 Automated SAP Transactions
+
+The system currently executes scenarios involving the following SAP transactions:
+
+* IW21
+* IW31
+* IW32
+* IW34
+* IW41
+* IP41
+* IP42
+
+These transactions are part of **maintenance and planning flows within SAP PM**.
+
+---
+
+=== ⚙️ How to Run the Project
+
+==== 1️⃣ Clone the repository
+
 [source,bash]
 ----
-git clone https://github.com/veleoterio/sap-ai-tester.git
-cd sap-ai-tester
+git clone https://github.com/Vitinhoorei/automated-integrated-tests.git
+cd automated-integrated-tests
 ----
 
-* 2️⃣ **Install dependencies**
+==== 2️⃣ Create a virtual environment
+
 [source,bash]
 ----
-pip install openpyxl pywin32 pyyaml pillow requests python-dotenv
+python -m venv venv
 ----
 
-* 3️⃣ **Run the system via Terminal (VS Code)**
+Activate environment:
+
+Windows
+
+[source,bash]
+----
+venv\Scripts\activate
+----
+
+Linux / Mac
+
+[source,bash]
+----
+source venv/bin/activate
+----
+
+==== 3️⃣ Install dependencies
+
+[source,bash]
+----
+pip install -r requirements.txt
+----
+
+==== 4️⃣ Run the system
+
 [source,powershell]
 ----
-py src/main.py --file "c:\path\to\your\file.xlsx" --sheet "SheetName"
+python src/main.py --file "c:\path\to\file.xlsx" --sheet "SheetName"
 ----
 
-'''
+---
 
 == 🛠️ Tecnologias / Technologies
-* **Python 3.10+**
-* **SAP GUI Scripting** (win32com)
-* **GenAI / LLM** (GPT-4o-mini)
-* **OpenPyXL** (Excel)
 
-== 🫱🏾‍🫲🏿 Integrante / Author
-* **Vitor Eduardo Eleoterio** - https://github.com/SGA-OKC
-* **Juscelino Rodrigues Brandão** - https://github.com/TOKYOSXR
+* Python 3.10+
+* SAP GUI Scripting (win32com)
+* OpenPyXL
+* YAML
+* Requests
+* Pillow
+* Python-Dotenv
+* GenAI / LLM (GPT-4o-mini)
+
+---
+
+== 👨‍💻 Autores / Authors
+
+* **Vitor Eduardo Eleoterio**  
+https://github.com/SGA-OKC
+
+* **Juscelino Rodrigues Brandão**  
+https://github.com/TOKYOSXR
