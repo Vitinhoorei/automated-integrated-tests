@@ -6,37 +6,33 @@ import requests
 import config
 
 from param_enricher import enrich_params
+from error_repository import ErrorRepository
 
 class AITestIntegrator:
-    """
-    Responsabilidades:
-    - Chamar IA de forma controlada
-    - NÃO criar parâmetros livremente
-    - Analisar erros SAP com base em:
-        - Mensagem SAP
-        - Dump (se existir)
-        - Histórico já executado
-    - Gerar sugestão + justificativa + confiança
-    """
 
     def __init__(self):
         self.api_url = getattr(config, "IA_BASE_URL", os.getenv("IA_BASE_URL", ""))
         self.api_key = getattr(config, "IA_API_KEY", os.getenv("IA_API_KEY", ""))
-        self.error_memory: dict[str, dict] = {}
-        self.shared_context: dict[str, str] = {}
+        self.shared_context = {}
+        self.historico_sucesso =[]
+        self.repo = ErrorRepository()
 
-    def _chamar_ia(self, prompt: str, json_mode: bool = False) -> str:
+    # CHAMADA IA
+    def _chamar_ia(self, prompt: str, json_mode: bool = False):
+
         payload = {
             "question": prompt,
             "model": "gpt-4o-mini",
             "temperature": 0
         }
+
         headers = {
             "Content-Type": "application/json",
             "apiKey": self.api_key
         }
 
         try:
+
             resp = requests.post(
                 self.api_url,
                 headers=headers,
@@ -45,52 +41,53 @@ class AITestIntegrator:
             )
 
             if resp.status_code != 200:
-                return "{}" if json_mode else "Erro ao chamar IA."
+                return "{}" if json_mode else "Erro IA"
 
             text = resp.json().get("response", "")
+
             if json_mode:
                 match = re.search(r"\{.*\}", text, re.DOTALL)
-                return match.group(0) if match else "{}"
 
+                if match:
+                    return match.group(0)
+                return "{}"
             return text
 
-        except Exception as e:
-            return "{}" if json_mode else f"Falha IA: {e}"
+        except Exception:
+            return "{}" if json_mode else "Falha IA"
 
-    def preparar_parametros(
-        self,
-        tcode: str,
-        explanation: str,
-        raw_params: str
-    ) -> dict[str, str]:
-
-        params_basicos = enrich_params(tcode, explanation, raw_params)
+    # PREPARAÇÃO DE PARAMETROS
+    def preparar_parametros(self, tcode, explanation, raw_params):
+        params = enrich_params(tcode, explanation, raw_params)
         tcode_u = tcode.upper().strip()
-
+        
         if tcode_u == "IW31":
-            if "Nota" not in params_basicos and "Nota" in self.shared_context:
-                params_basicos["Nota"] = self.shared_context["Nota"]
-            elif "Nota" not in params_basicos and "Aviso" in self.shared_context:
-                params_basicos["Nota"] = self.shared_context["Aviso"]
 
+            if "Nota" not in params and "Nota" in self.shared_context:
+                params["Nota"] = self.shared_context["Nota"]
+
+        # Compartilhar ORDEM
         if tcode_u in ["IW32", "IW41"]:
-            if "Ordem" not in params_basicos and "Ordem" in self.shared_context:
-                params_basicos["Ordem"] = self.shared_context["Ordem"]
 
-        return params_basicos
+            if "Ordem" not in params and "Ordem" in self.shared_context:
+                params["Ordem"] = self.shared_context["Ordem"]
 
-    def extrair_id_integrado(self, tcode: str, status_message: str) -> None:
+        return params
+
+    # EXTRAIR IDS GERADOS PELO SAP
+    def extrair_id_integrado(self, tcode, status_message):
+
         if not status_message:
             return
 
         prompt = f"""
-                    A transação {tcode} retornou:
+                    Extraia entidade e ID da mensagem SAP:
                     "{status_message}"
-
-                    Extraia a entidade e o ID gerado.
+                    
                     Retorne JSON:
-                    {{ "entidade": "NOME", "id": "NUMERO" }}
-                    """
+                    {{"entidade":"NOME","id":"VALOR"}}
+                """
+
         resposta = self._chamar_ia(prompt, json_mode=True)
 
         try:
@@ -100,86 +97,130 @@ class AITestIntegrator:
         except Exception:
             pass
 
-    def analisar_erro_sap(
-        self,
-        tcode: str,
-        status_message: str,
-        dump_path: str | None
-    ) -> dict:
-        """
-        Retorna:
-        - causa_raiz
-        - sugestao_correcao
-        - justificativa
-        - confianca (0–100)
-        """
+    # ANALISE DE ERRO SAP
+    def analisar_erro_sap(self, tcode, status_message, dump_path=None, params=None):
 
-        if not status_message:
-            return {}
+        normalized = self._normalize_error(tcode, status_message, params)
 
-        normalized = self._normalize_error(tcode, status_message)
+        saved = self.repo.get(normalized)
+        if saved:
 
-        if normalized in self.error_memory:
-            prev = self.error_memory[normalized] or {}
             return {
-                "causa_raiz": prev.get("causa_raiz", status_message),
-                "sugestao_correcao": prev.get("sugestao_correcao", "Verificar mensagem SAP e evidência."),
-                "justificativa": "Erro idêntico já ocorrido anteriormente no mesmo fluxo.",
-                "confianca": 90
+                "causa_raiz": saved["causa_raiz"],
+                "sugestao_correcao": saved["sugestao_correcao"],
+                "parametro_sugerido": saved.get("parametro_sugerido"),
+                "confianca": saved.get("confianca", 80),
+                "justificativa": "Erro conhecido na base."
             }
 
         dump_text = self._read_dump(dump_path)
-
-        prompt = f"""
-                    Analise a falha SAP abaixo.
-
-                    TCODE: {tcode}
-                    Mensagem SAP: "{status_message}"
-                    Dump (se houver):
-                    {dump_text}
-
-                    Considere:
-                    - campos obrigatórios
-                    - parâmetros ausentes ou inválidos
-                    - etapa do fluxo
-
-                    Retorne APENAS JSON:
-                    {{
-                    "causa_raiz": "até 100 caracteres",
-                    "sugestao_correcao": "até 150 caracteres"
-                    }}
-                    """
-        resposta = self._chamar_ia(prompt, json_mode=True)
+        campos_disponiveis = []
 
         try:
+            import yaml
+            with open("configs/field_map.yaml", "r", encoding="utf-8") as f:
+                field_map = yaml.safe_load(f)
+            if tcode in field_map:
+                for screen in field_map[tcode]:
+                    campos_disponiveis.extend(field_map[tcode][screen].keys())
+
+        except Exception:
+            pass
+
+        # PROMPT IA
+        prompt = f"""
+                    Analise o erro SAP.
+
+                    TCODE: {tcode}
+
+                    Mensagem SAP:
+                    {status_message}
+
+                    Parametros enviados nesta transação (SAGRADOS - NÃO ALTERE):
+                    {params}
+
+                    Campos disponíveis na transação atual:
+                    {campos_disponiveis}
+
+                    Histórico de Transações Anteriores com Sucesso:
+                    {self.historico_sucesso}
+
+                    Dump técnico:
+                    {dump_text}
+
+                    REGRAS OBRIGATÓRIAS:
+                    1. PARÂMETROS INTOCÁVEIS: NUNCA sugira a alteração de um parâmetro que já veio preenchido (Ex: não mude o Tipo de Ordem).
+                    2. COMPARAÇÃO INTELIGENTE (O SEGREDO): Olhe a lista de "Histórico de Transações Anteriores com Sucesso". Se a transação atual for, por exemplo, "Tipo de ordem"="ZMEL" e faltar um campo, procure no Histórico uma transação passada que TAMBÉM era "ZMEL" e copie o valor que funcionou lá. NUNCA misture parâmetros de tipos de ordem diferentes.
+                    3. SÓ PREENCHA O VAZIO: Você só pode sugerir valores para campos que estão vazios ou ausentes na transação atual.
+                    4. PROIBIDO INVENTAR DADOS MESTRES. Se não achar uma correspondência exata no Histórico que sirva para a transação atual, retorne "confianca": 0 e "parametro_sugerido": null.
+                    5. Sugira o valor no formato: Campo=Valor.
+
+                    Retorne APENAS JSON:
+
+                    {{
+                    "causa_raiz":"texto explicando o erro",
+                    "sugestao_correcao":"texto instruindo o usuário",
+                    "parametro_sugerido": "Campo=Valor" ou null,
+                    "confianca": 0 a 100
+                    }}
+                """
+
+        resposta = self._chamar_ia(prompt, json_mode=True)
+        try:
             data = json.loads(resposta)
-            if not isinstance(data, dict):
-                raise ValueError("IA não retornou dict")
         except Exception:
             data = {}
 
-        data = {
-            "causa_raiz": data.get("causa_raiz", "Erro não identificado"),
-            "sugestao_correcao": data.get("sugestao_correcao", "Verificar mensagem SAP e evidência.")
+        result = {
+            "causa_raiz": data.get("causa_raiz", status_message),
+            "sugestao_correcao": data.get("sugestao_correcao", ""),
+            "parametro_sugerido": data.get("parametro_sugerido"),
+            "confianca": data.get("confianca", 50),
+            "justificativa": "Análise IA"
+
         }
 
-        self.error_memory[normalized] = data
+        self.repo.save(normalized, result)
 
-        return {
-            **data,
-            "justificativa": "Primeira ocorrência deste erro. Análise baseada na mensagem SAP e no dump.",
-            "confianca": 65
-        }
+        return result
 
-    def _normalize_error(self, tcode: str, message: str) -> str:
-        base = f"{tcode}|{message.lower().strip()}"
-        return hashlib.md5(base.encode("utf-8")).hexdigest()
+    # APLICAR CORREÇÃO
+    def aplicar_correcao_parametros(self, params, parametro_sugerido):
 
-    def _read_dump(self, dump_path: str | None) -> str:
+        if not parametro_sugerido:
+            return params
+        try:
+            chave, valor = parametro_sugerido.split("=")
+            params[chave.strip()] = valor.strip()
+
+        except Exception:
+            pass
+        return params
+
+    # NORMALIZA ERRO
+    def _normalize_error(self, tcode, message, params=None):
+        msg_limpa = message.lower().strip()
+        msg_limpa = re.sub(r'\d+', 'X', msg_limpa)
+        msg_limpa = re.sub(r"'.*?'", "'X'", msg_limpa)
+        base = f"{tcode}|{msg_limpa}"
+        contexto = ""
+        
+        if params and "Tipo de ordem" in params:
+            contexto = f"|TIPO:{params['Tipo de ordem']}"
+
+        base = f"{tcode}|{msg_limpa}{contexto}"
+        return hashlib.md5(base.encode()).hexdigest()
+
+    # LER DUMP
+    def _read_dump(self, dump_path):
+
         if dump_path and os.path.exists(dump_path):
+
             try:
                 with open(dump_path, "r", encoding="utf-8") as f:
                     return f.read()[:2000]
+
             except Exception:
                 pass
+
         return "Sem dump."
