@@ -31,6 +31,20 @@ class SapAutomation:
         application = sap_gui_auto.GetScriptingEngine
         connection = application.Children(0)
         self.session = connection.Children(0)
+        
+        try:
+            info = self.session.info
+            print("\n" + "="*40)
+            print("🔍 DIAGNÓSTICO DO AMBIENTE SAP 🔍")
+            print(f"Sistema: {info.SystemName}")
+            print(f"Versão do SAP: {info.Release}")
+            print(f"Usuário Logado: {info.User}")
+            
+            tema = getattr(info, "UITheme", "Não identificado (Pode ser versão antiga)")
+            print(f"Tema Visual: {tema}")
+            print("="*40 + "\n")
+        except Exception as e:
+            print(f"[Aviso] Não foi possível carregar o diagnóstico do SAP: {e}")
 
     def _ensure_session(self) -> None:
         if self.session is None:

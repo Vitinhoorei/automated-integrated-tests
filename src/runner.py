@@ -89,7 +89,6 @@ def run_excel_tests(
         retry_count = 0
         MAX_RETRY = 3
 
-        # Lógica de Self-Healing (IA) vinda da sua branch
         while True:
 
             result = sap.run_tcode(
@@ -97,16 +96,16 @@ def run_excel_tests(
                 params,
                 item.explanation,
                 evidence_path=evidence_path,
-                mode=mode, # Usando o mode validado da main
+                mode=mode,
             )
             
-            print("DEBUG SAP MESSAGE:", result.message)
+            if result.status != "PASS":
+                print("DEBUG SAP MESSAGE:", result.message)
             
             # PASS
             if result.status == "PASS":
 
                 ai.extrair_id_integrado(item.tcode, result.message)
-                
                 transacao_ok = params.copy()
                 transacao_ok["_TCODE"] = item.tcode
                 ai.historico_sucesso.append(transacao_ok)

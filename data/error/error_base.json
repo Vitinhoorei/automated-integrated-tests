@@ -1,1 +1,9 @@
-{}
+{
+  "fed2707bafd08e104f794b367de47987": {
+    "causa_raiz": "O erro ocorre porque há campos obrigatórios que não foram preenchidos na transação atual. O campo 'Tipo de atividade de manutenção' está vazio, e este campo é necessário para concluir a transação 'IW31' com o 'Tipo de ordem'='ZMEL'.",
+    "sugestao_correcao": "Preencha o campo 'Tipo de atividade de manutenção' com um valor válido baseado no histórico de transações bem-sucedidas para o 'Tipo de ordem'='ZMEL'. Verifique no histórico se há um valor usado anteriormente para este campo na mesma combinação de parâmetros.",
+    "parametro_sugerido": "Tipo de atividade de manutenção=31",
+    "confianca": 100,
+    "justificativa": "Análise IA"
+  }
+}
