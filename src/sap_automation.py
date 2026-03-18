@@ -31,20 +31,6 @@ class SapAutomation:
         application = sap_gui_auto.GetScriptingEngine
         connection = application.Children(0)
         self.session = connection.Children(0)
-        
-        try:
-            info = self.session.info
-            print("\n" + "="*40)
-            print("🔍 DIAGNÓSTICO DO AMBIENTE SAP 🔍")
-            print(f"Sistema: {info.SystemName}")
-            print(f"Versão do SAP: {info.Release}")
-            print(f"Usuário Logado: {info.User}")
-            
-            tema = getattr(info, "UITheme", "Não identificado (Pode ser versão antiga)")
-            print(f"Tema Visual: {tema}")
-            print("="*40 + "\n")
-        except Exception as e:
-            print(f"[Aviso] Não foi possível carregar o diagnóstico do SAP: {e}")
 
     def _ensure_session(self) -> None:
         if self.session is None:
@@ -137,7 +123,13 @@ class SapAutomation:
         except Exception:
             return
 
-        botoes_confirmacao = ["tbar[0]/btn[0]", "usr/btnBUTTON_1", "tbar[0]/btn[11]"]
+        botoes_confirmacao = [
+            "usr/btnSPOP-OPTION1", 
+            "usr/btnBUTTON_1",    
+            "tbar[0]/btn[0]",     
+            "tbar[0]/btn[11]"     
+        ]
+        
         for btn in botoes_confirmacao:
             try:
                 wnd1.findById(btn).press()
@@ -924,8 +916,9 @@ class SapAutomation:
 
             while params_to_fill and tela_atual < max_telas:
                 tela_atual += 1
+                self._handle_all_popups()
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
-
+                
                 if tcode.upper() == "IW21" and not iw21_z4_popup_done:
                     popup_handled = self._handle_iw21_z4_popup(parameters)
                     if popup_handled:
@@ -1132,3 +1125,33 @@ class SapAutomation:
             dump = dump_screen(self.session) if self.session else ""
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
+    
+    def _handle_all_popups(self):
+        """Trata popups de forma agressiva (Data, Avisos, Confirmações)"""
+        if not self.session:
+            return False
+
+        try:
+            wnd1 = self.session.findById("wnd[1]", False)
+            if wnd1:                
+                botoes = [
+                    "tbar[0]/btn[0]",    
+                    "usr/btnBUTTON_1",   
+                    "tbar[0]/btn[11]",   
+                    "usr/btnSPOP-OPTION1" 
+                ]
+                
+                for btn_path in botoes:
+                    try:
+                        wnd1.findById(btn_path).press()
+                        time.sleep(0.8)
+                        return True
+                    except:
+                        continue
+                
+                wnd1.sendVKey(0)
+                time.sleep(0.8)
+                return True
+        except Exception:
+            pass
+        return False
