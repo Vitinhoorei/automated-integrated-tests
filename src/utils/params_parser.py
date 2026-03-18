@@ -1,6 +1,5 @@
 from __future__ import annotations
-import unicodedata
-import re
+from .text_normalizer import normalize_text
 
 PARAM_ALIASES = {
     "LI": "Local de instalação",
@@ -49,65 +48,19 @@ PARAM_ALIASES = {
     "ESTRATEGIA": "Estratégia",
 }
 
-def remove_acento(txt: str) -> str:
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', txt)
-        if unicodedata.category(c) != 'Mn'
-    )
-
-def normalize_alias_key(key: str) -> str:
-    """
-    Normaliza chave para busca no alias
-    """
-    key = key.strip().upper()
-    key = remove_acento(key)
-    key = re.sub(r"[^\w\s]", " ", key)
-    key = " ".join(key.split())
-    
-    return key
-
-def normalize_key(key: str) -> str:
-    """
-    Converte chave recebida para o nome esperado no field_map
-    """
-    
-    alias_key = normalize_alias_key(key)
-
-    if alias_key in PARAM_ALIASES:
-        return PARAM_ALIASES[alias_key]
-
-    return key.strip()
-
-def parse_parameters(raw: str) -> dict[str, str]:
-    """
-    Converte string de parâmetros em dict
-    Exemplo entrada:
-    LI: D10167100 | PRIORIDADE: 2 | TRABALHO: 1
-    Saída:
-
-    {
-        "Local de instalação": "D10167100",
-        "Prioridade": "2",
-        "Trabalho": "1"
-    }
-    """
-
-    raw = (raw or "").strip()
-    if not raw:
+def parse_parameters(raw_string: str) -> dict:
+    if not raw_string or str(raw_string).strip() == "":
         return {}
-
-    parts = [p.strip() for p in raw.split("|") if p.strip()]
-    out: dict[str, str] = {}
+    
+    parts = [p.strip() for p in str(raw_string).split("|") if p.strip()]
+    out = {}
 
     for p in parts:
-        if ":" not in p:
-            continue
-        
+        if ":" not in p: continue
         k, v = p.split(":", 1)
-        key = normalize_key(k)
-        value = v.strip()
-
-        if key:
-            out[key] = value
-
+        
+        key_norm = normalize_text(k)
+        final_key = PARAM_ALIASES.get(key_norm, k.strip())
+        
+        out[final_key] = v.strip()
     return out

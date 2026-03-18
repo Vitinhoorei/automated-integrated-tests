@@ -1,18 +1,16 @@
 import os
 import sys
-sys.path.insert(0, os.path.dirname(__file__))
-
 import argparse
-from runner import run_excel_tests
+from src.runner import run_excel_tests
+
+root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if root not in sys.path:
+    sys.path.insert(0, root)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", required=True)
-    parser.add_argument(
-        "--sheet",
-        default="ALL",
-        help='Nome da aba, lista separada por vírgula, ou "ALL" para todas.',
-    )
+    parser.add_argument("--sheet", default="ALL")
     parser.add_argument("--no-copy", action="store_true")
     args = parser.parse_args()
 
