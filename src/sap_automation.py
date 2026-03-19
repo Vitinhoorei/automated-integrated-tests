@@ -42,6 +42,25 @@ class SapAutomation:
             return {str(k).upper(): (v or {}) for k, v in data.items()}
         except FileNotFoundError:
             return {}
+        
+    def go_to_initial_screen(self) -> None:
+        """Força a volta para a tela inicial limpando inclusive popups de saída."""
+        self._ensure_session()
+        try:
+            for _ in range(3):
+                while self._popup_exists():
+                    self._dismiss_popup()
+                    time.sleep(0.3)
+                
+                self.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.5)
+                
+                if not self._popup_exists():
+                    break
+                
+        except Exception:
+            pass
 
     @staticmethod
     def _norm_key(text: str) -> str:
@@ -1146,12 +1165,16 @@ class SapAutomation:
             msg = sb or f"Executado com sucesso ({modo_txt})"
             if popup_msgs:
                 msg += f" | POPUP: {' || '.join(popup_msgs)}"
+                
             return SapResult("PASS", "OK", msg, ev)
 
         except Exception as e:
             dump = dump_screen(self.session) if self.session else ""
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
+        
+        finally: 
+            self.go_to_initial_screen()
     
     def _handle_all_popups(self):
         """Trata popups de forma agressiva (Data, Avisos, Confirmações)"""
