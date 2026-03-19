@@ -1,14 +1,16 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+
 import time
 import unicodedata
+import re
 import win32com.client
 import yaml
-import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 from sap_screen_dump import dump_screen
+
 
 @dataclass
 class SapResult:
@@ -121,12 +123,12 @@ class SapAutomation:
             return
 
         botoes_confirmacao = [
-            "usr/btnSPOP-OPTION1",
-            "usr/btnBUTTON_1",
-            "tbar[0]/btn[0]",
-            "tbar[0]/btn[11]",
+            "usr/btnSPOP-OPTION1", 
+            "usr/btnBUTTON_1",    
+            "tbar[0]/btn[0]",     
+            "tbar[0]/btn[11]"     
         ]
-
+        
         for btn in botoes_confirmacao:
             try:
                 wnd1.findById(btn).press()
@@ -140,56 +142,6 @@ class SapAutomation:
             time.sleep(0.4)
         except Exception:
             pass
-
-    # =========================
-    # FLEXIBILIZAÇÃO DE IDs SAP
-    # =========================
-    def _expand_possible_ids(self, sap_id: Any) -> list[str]:
-        """
-        Gera possíveis IDs alternativos para casos onde parte do ID muda
-        conforme configuração do usuário, ex:
-        SAPLIWO1:0100 <-> SAPLIWO1:0120
-
-        Também aceita lista/tupla no YAML.
-        """
-        candidates: list[str] = []
-
-        if isinstance(sap_id, (list, tuple)):
-            raw_ids = [str(x).strip() for x in sap_id if str(x).strip()]
-        else:
-            raw_ids = [str(sap_id).strip()] if str(sap_id).strip() else []
-
-        for raw in raw_ids:
-            if raw not in candidates:
-                candidates.append(raw)
-
-            # fallback específico SAPLIWO1
-            if "SAPLIWO1:0100" in raw:
-                alt = raw.replace("SAPLIWO1:0100", "SAPLIWO1:0120")
-                if alt not in candidates:
-                    candidates.append(alt)
-
-            if "SAPLIWO1:0120" in raw:
-                alt = raw.replace("SAPLIWO1:0120", "SAPLIWO1:0100")
-                if alt not in candidates:
-                    candidates.append(alt)
-
-        return candidates
-
-    def _find_by_id_flexible(self, sap_id: Any):
-        """
-        Tenta encontrar o objeto usando o ID original e IDs alternativos.
-        """
-        last_error = None
-        for candidate in self._expand_possible_ids(sap_id):
-            try:
-                return self.session.findById(candidate)
-            except Exception as e:
-                last_error = e
-                continue
-        if last_error:
-            raise last_error
-        raise Exception(f"ID SAP inválido ou vazio: {sap_id}")
 
     def _hardcopy_wnd0(self, out_path: str) -> str:
         try:
@@ -217,7 +169,7 @@ class SapAutomation:
     def _capture_object_region(self, obj_id: str, out_path: str, pad: int = 12) -> bool:
         try:
             from PIL import ImageGrab
-            obj = self._find_by_id_flexible(obj_id)
+            obj = self.session.findById(obj_id)
             left, top, width, height = (
                 int(getattr(obj, "ScreenLeft", 0)),
                 int(getattr(obj, "ScreenTop", 0)),
@@ -245,7 +197,7 @@ class SapAutomation:
         try:
             from PIL import Image
             wnd0 = self.session.findById("wnd[0]")
-            field = self._find_by_id_flexible(field_id)
+            field = self.session.findById(field_id)
             with Image.open(base) as img:
                 iw, ih = img.size
                 wx, wy = wnd0.ScreenLeft, wnd0.ScreenTop
@@ -339,11 +291,11 @@ class SapAutomation:
                 return str(value).strip()
         return ""
 
-    def _set_text_if_exists(self, obj_id: Any, value: str) -> bool:
+    def _set_text_if_exists(self, obj_id: str, value: str) -> bool:
         if not obj_id:
             return False
         try:
-            obj = self._find_by_id_flexible(obj_id)
+            obj = self.session.findById(obj_id)
             try:
                 obj.text = value
             except Exception:
@@ -352,19 +304,19 @@ class SapAutomation:
         except Exception:
             return False
 
-    def _set_checkbox_if_exists(self, obj_id: Any, checked: bool) -> bool:
+    def _set_checkbox_if_exists(self, obj_id: str, checked: bool) -> bool:
         if not obj_id:
             return False
         try:
-            obj = self._find_by_id_flexible(obj_id)
+            obj = self.session.findById(obj_id)
             obj.selected = checked
             return True
         except Exception:
             return False
 
-    def _table_exists(self, obj_id: Any) -> bool:
+    def _table_exists(self, obj_id: str) -> bool:
         try:
-            self._find_by_id_flexible(obj_id)
+            self.session.findById(obj_id)
             return True
         except Exception:
             return False
@@ -385,6 +337,9 @@ class SapAutomation:
                 pass
 
     def _handle_iw21_z4_popup(self, parameters: dict[str, str]) -> bool:
+        """
+        Se for nota Z4 e aparecer popup na IW21, tenta clicar em Avançar.
+        """
         try:
             if self._screen_key() != "SAPLIQS0|0100":
                 return False
@@ -431,6 +386,13 @@ class SapAutomation:
             return False
 
     def _run_iw41_flow(self, parameters: dict, evidence_path: str = "", mode: str = "real") -> SapResult:
+        """
+        Fluxo especial IW41:
+        - entra na transação
+        - Enter / Enter
+        - se houver tabela com uma ou mais linhas, processa todas
+        - se entrar direto no detalhe, processa uma vez
+        """
         try:
             is_real_mode = self._is_real_mode(mode)
 
@@ -473,7 +435,7 @@ class SapAutomation:
                         break
 
                     try:
-                        table = self._find_by_id_flexible(table_id)
+                        table = self.session.findById(table_id)
                         row_count = int(getattr(table, "RowCount", 0))
                     except Exception:
                         break
@@ -611,11 +573,15 @@ class SapAutomation:
             return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
 
     def _run_ip41_ip42_flow(self, tcode: str, parameters: dict, explanation: str, evidence_path: str = "", mode: str = "real") -> SapResult:
+        """
+        Fluxo especial Unificado da IP41 e IP42:
+        Preenche a tela inicial -> Abas -> Cria Lista de Tarefas -> Tabela -> PactsMt (Apenas IP42) -> Simulado ou Real
+        """
         try:
             tcode_u = tcode.upper()
             is_real_mode = self._is_real_mode(mode)
             mapping = {}
-            for _, v in self.field_map.get(tcode_u, {}).items():
+            for k, v in self.field_map.get(tcode_u, {}).items():
                 if isinstance(v, dict):
                     mapping.update(v)
             mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
@@ -636,11 +602,7 @@ class SapAutomation:
                 val = get_val(key_name)
                 if val:
                     try:
-                        obj = self._find_by_id_flexible(get_id(key_name))
-                        try:
-                            obj.text = val
-                        except Exception:
-                            obj.key = val
+                        self.session.findById(get_id(key_name)).text = val
                     except Exception:
                         raise Exception(f"Campo '{key_name}' não encontrado na tela. O SAP travou ou a tela não carregou.")
 
@@ -648,20 +610,15 @@ class SapAutomation:
                 val = get_val(key_name)
                 if val:
                     try:
-                        obj = self._find_by_id_flexible(get_id(key_name))
-                        obj.key = val
+                        self.session.findById(get_id(key_name)).key = val
                     except Exception:
                         raise Exception(f"Combo '{key_name}' não encontrado na tela. O SAP travou.")
 
             ctg = get_val("Ctg.plano de manutenção") or get_val("Ctg.plano manutenção") or get_val("Ctg.plano manut.")
             if ctg:
                 try:
-                    id_ctg = (
-                        mapping.get("Ctg.plano manut.")
-                        or mapping.get("Ctg.plano de manutenção")
-                        or mapping_norm.get(self._norm_key("Ctg.plano manutenção"))
-                    )
-                    self._find_by_id_flexible(id_ctg).key = ctg
+                    id_ctg = mapping.get("Ctg.plano manut.") or mapping.get("Ctg.plano de manutenção") or mapping_norm.get(self._norm_key("Ctg.plano manutenção"))
+                    self.session.findById(id_ctg).key = ctg
                 except Exception:
                     raise Exception("Campo 'Ctg.plano de manutenção' não encontrado na tela inicial.")
 
@@ -669,17 +626,16 @@ class SapAutomation:
                 estra = get_val("Estratégia") or get_val("Estrategia")
                 if estra:
                     try:
-                        self._find_by_id_flexible(get_id("Estratégia")).text = estra
+                        self.session.findById(get_id("Estratégia")).text = estra
                     except Exception:
                         raise Exception("Campo 'Estratégia' não encontrado na tela inicial (IP42).")
 
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
-
             val_texto = get_val("Texto do plano de manutenção") or get_val("Texto Breve")
             if val_texto:
                 try:
-                    self._find_by_id_flexible(get_id("Texto do plano de manutenção")).text = val_texto
+                    self.session.findById(get_id("Texto do plano de manutenção")).text = val_texto
                 except Exception:
                     raise Exception("Campo 'Texto do plano de manutenção' não encontrado.")
 
@@ -692,7 +648,7 @@ class SapAutomation:
             val_equip = get_val("Nº equipamento") or get_val("Equipamento")
             if val_equip:
                 try:
-                    self._find_by_id_flexible(get_id("Nº equipamento")).text = val_equip
+                    self.session.findById(get_id("Nº equipamento")).text = val_equip
                 except Exception:
                     raise Exception("Campo 'Nº equipamento' não encontrado.")
 
@@ -710,10 +666,9 @@ class SapAutomation:
                 val_plan_sort = get_val("Tipo de programação") or get_val("Campo ordenação") or get_val("Campo ordenacao")
                 if val_plan_sort:
                     try:
-                        self._find_by_id_flexible(get_id("Campo Ordenação")).key = val_plan_sort
+                        self.session.findById(get_id("Campo Ordenação")).key = val_plan_sort
                     except Exception:
-                        obj = self._find_by_id_flexible(get_id("Campo Ordenação"))
-                        obj.value = val_plan_sort
+                        self.session.findById(get_id("Campo Ordenação")).value = val_plan_sort
 
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.5)
@@ -724,7 +679,7 @@ class SapAutomation:
             time.sleep(0.5)
 
             try:
-                self._find_by_id_flexible(get_id("Criar lista de tarefas")).press()
+                self.session.findById(get_id("Criar lista de tarefas")).press()
             except Exception:
                 raise Exception("Botão 'Criar lista de tarefas' não encontrado.")
             time.sleep(1.0)
@@ -749,7 +704,7 @@ class SapAutomation:
             val_desc_op = get_val("Descrição da operação") or get_val("Descrição operação") or get_val("Texto Operação")
             if val_desc_op:
                 try:
-                    self._find_by_id_flexible(get_id("Descrição da operação")).text = val_desc_op
+                    self.session.findById(get_id("Descrição da operação")).text = val_desc_op
                 except Exception:
                     raise Exception("Campo 'Descrição da operação' na tabela não encontrado.")
 
@@ -791,24 +746,24 @@ class SapAutomation:
                 except Exception:
                     pass
                 return SapResult("PASS", "OK", msg, ev)
+            else:
+                msg = f"Fluxo {tcode_u} executado e salvo com sucesso."
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+                time.sleep(1.5)
 
-            msg = f"Fluxo {tcode_u} executado e salvo com sucesso."
-            self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
-            time.sleep(1.5)
+                sb = self._statusbar_text()
+                sb_type = self._statusbar_type()
 
-            sb = self._statusbar_text()
-            sb_type = self._statusbar_type()
+                if sb_type in {"E", "A", "X"}:
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao salvar {tcode_u}", ev)
 
-            if sb_type in {"E", "A", "X"}:
-                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao salvar {tcode_u}", ev)
-
-            return SapResult("PASS", "OK", sb or msg, ev)
+                return SapResult("PASS", "OK", sb or msg, ev)
 
         except Exception as e:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", str(e), ev)
-        
+    
     def _find(self, sap_id: str):
         try:
             return self.session.findById(sap_id)
@@ -836,7 +791,7 @@ class SapAutomation:
             pass
 
         return self.session.findById(sap_id)
-    
+
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         self._ensure_session()
         if not params:
@@ -844,7 +799,7 @@ class SapAutomation:
 
         tcode_maps = self.field_map.get((tcode or "").upper(), {})
         full_mapping = {}
-        for _, fields in tcode_maps.items():
+        for screen_key, fields in tcode_maps.items():
             if isinstance(fields, dict):
                 full_mapping.update(fields)
 
@@ -857,18 +812,17 @@ class SapAutomation:
         for key, value in params.items():
             if value is None or str(value).strip() == "":
                 continue
-
             sap_id = full_mapping.get(key) or mapping_norm.get(self._norm_key(key))
             if sap_id:
                 try:
                     obj = self._find(sap_id)
                     obj_type = str(getattr(obj, "Type", ""))
                     if obj_type == "GuiTab":
-                        abas[key] = (sap_id, value)
+                        abas[key] = (obj, value)
                     elif obj_type == "GuiButton":
-                        botoes[key] = (sap_id, value)
+                        botoes[key] = (obj, value)
                     else:
-                        campos_normais[key] = (sap_id, obj_type, value)
+                        campos_normais[key] = (obj, obj_type, value)
                 except Exception:
                     remaining_params[key] = value
             else:
@@ -877,12 +831,11 @@ class SapAutomation:
         action_taken = "NONE"
 
         if campos_normais:
-            for key, (sap_id, obj_type, value) in campos_normais.items():
+            for key, (obj, obj_type, value) in campos_normais.items():
                 val_str = str(value).strip()
                 if val_str.endswith(".0"):
                     val_str = val_str[:-2]
                 try:
-                    obj = self._find_by_id_flexible(sap_id)
                     if obj_type == "GuiComboBox":
                         obj.key = val_str
                     elif obj_type in ("GuiCheckBox", "GuiRadioButton"):
@@ -904,12 +857,12 @@ class SapAutomation:
 
         if botoes:
             clicked_one = False
-            for key, (sap_id, value) in botoes.items():
+            for key, (obj, value) in botoes.items():
                 if not clicked_one:
                     val_str = str(value).strip().upper()
                     if val_str in ["X", "1", "TRUE", "SIM", "S", "Y", "YES"]:
                         try:
-                            self._find_by_id_flexible(sap_id).press()
+                            obj.press()
                             action_taken = "BUTTON"
                             clicked_one = True
                             time.sleep(0.9)
@@ -926,10 +879,10 @@ class SapAutomation:
 
         if abas:
             clicked_one = False
-            for key, (sap_id, value) in abas.items():
+            for key, (obj, value) in abas.items():
                 if not clicked_one:
                     try:
-                        self._find_by_id_flexible(sap_id).select()
+                        obj.select()
                         action_taken = "TAB"
                         clicked_one = True
                         time.sleep(0.5)
@@ -992,7 +945,7 @@ class SapAutomation:
                 tela_atual += 1
                 self._handle_all_popups()
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
-
+                
                 if tcode.upper() == "IW21" and not iw21_z4_popup_done:
                     popup_handled = self._handle_iw21_z4_popup(parameters)
                     if popup_handled:
@@ -1199,30 +1152,30 @@ class SapAutomation:
             dump = dump_screen(self.session) if self.session else ""
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", f"{e} | DUMP: {dump}", ev)
-
+    
     def _handle_all_popups(self):
-        """Trata popups de forma agressiva (Data, Avisos, Confirmações)."""
+        """Trata popups de forma agressiva (Data, Avisos, Confirmações)"""
         if not self.session:
             return False
 
         try:
             wnd1 = self.session.findById("wnd[1]", False)
-            if wnd1:
+            if wnd1:                
                 botoes = [
-                    "tbar[0]/btn[0]",
-                    "usr/btnBUTTON_1",
-                    "tbar[0]/btn[11]",
-                    "usr/btnSPOP-OPTION1",
+                    "tbar[0]/btn[0]",    
+                    "usr/btnBUTTON_1",   
+                    "tbar[0]/btn[11]",   
+                    "usr/btnSPOP-OPTION1" 
                 ]
-
+                
                 for btn_path in botoes:
                     try:
                         wnd1.findById(btn_path).press()
                         time.sleep(0.8)
                         return True
-                    except Exception:
+                    except:
                         continue
-
+                
                 wnd1.sendVKey(0)
                 time.sleep(0.8)
                 return True
