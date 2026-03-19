@@ -2,16 +2,14 @@
 
 import time
 import unicodedata
+import win32com.client
+import yaml
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
-
-import win32com.client
-import yaml
-
 from sap_screen_dump import dump_screen
-
 
 @dataclass
 class SapResult:
@@ -764,7 +762,35 @@ class SapAutomation:
         except Exception as e:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", str(e), ev)
+        
+    def _find(self, sap_id: str):
+        try:
+            return self.session.findById(sap_id)
+        except:
+            pass
 
+        test_id = sap_id
+        substituicoes = [
+            (":0100", ":0120"), (":0120", ":0100"),
+            (":7100", ":7120"), (":7120", ":7100"),
+            (":1100", ":1120"), (":1120", ":1100")
+        ]
+        
+        for de, para in substituicoes:
+            if de in sap_id:
+                try:
+                    return self.session.findById(sap_id.replace(de, para))
+                except:
+                    continue
+
+        try:
+            tech_name = sap_id.split('/')[-1].replace("ctxt", "").replace("txt", "").replace("chk", "")
+            return self.session.findById("wnd[0]").findByName(tech_name, "")
+        except:
+            pass
+
+        return self.session.findById(sap_id)
+    
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         self._ensure_session()
         if not params:
@@ -788,7 +814,7 @@ class SapAutomation:
             sap_id = full_mapping.get(key) or mapping_norm.get(self._norm_key(key))
             if sap_id:
                 try:
-                    obj = self.session.findById(sap_id)
+                    obj = self._find(sap_id)
                     obj_type = str(getattr(obj, "Type", ""))
                     if obj_type == "GuiTab":
                         abas[key] = (obj, value)

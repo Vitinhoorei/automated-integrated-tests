@@ -1,1 +1,16 @@
-{}
+{
+  "7bbcd2c12077433f7d29ce05e602033f": {
+    "causa_raiz": "O erro ocorreu porque o campo obrigatório 'Local de instalação' foi identificado como ausente ou preenchido incorretamente na transação IW21.",
+    "sugestao_correcao": "Certifique-se de que o valor do campo 'Local de instalação' está correto e enviado conforme esperado na transação. Verifique se o valor 'D10167100-S10167120' é válido e corresponde ao esperado pelo sistema SAP.",
+    "parametro_sugerido": null,
+    "confianca": 0,
+    "justificativa": "Análise IA"
+  },
+  "75683e8135b7eeff63e3e607fda5672b": {
+    "causa_raiz": "O erro ocorre porque alguns campos obrigatórios não foram preenchidos ou não estão presentes na transação atual, conforme indicado na mensagem SAP.",
+    "sugestao_correcao": "Verifique quais campos obrigatórios estão ausentes ou vazios na transação atual e preencha-os corretamente. Como não há histórico de transações anteriores com sucesso, não é possível sugerir valores com base em exemplos anteriores.",
+    "parametro_sugerido": null,
+    "confianca": 0,
+    "justificativa": "Análise IA"
+  }
+}
