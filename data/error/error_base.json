@@ -1,1 +1,16 @@
-{}
+{
+  "7bbcd2c12077433f7d29ce05e602033f": {
+    "causa_raiz": "O campo 'Local de instalação' está ausente ou não preenchido corretamente na transação atual, apesar de estar listado como disponível.",
+    "sugestao_correcao": "Verifique se o valor do campo 'Local de instalação' enviado está correto e de acordo com os dados mestres do sistema. Caso contrário, revise os parâmetros enviados ou confirme com o responsável pelo cadastro no SAP.",
+    "parametro_sugerido": null,
+    "confianca": 0,
+    "justificativa": "Análise IA"
+  },
+  "79dafaacf66f475598ef0b7e1dd4cd7e": {
+    "causa_raiz": "O erro ocorre porque o campo 'Centro' não foi preenchido na transação IW31. Esse campo é essencial para a criação de uma ordem de manutenção no SAP e está ausente nos parâmetros enviados.",
+    "sugestao_correcao": "Verifique no histórico de transações anteriores se há uma correspondência exata para o tipo de ordem 'ZCOR' e preencha o campo 'Centro' com o valor utilizado em uma transação de sucesso. Caso não encontre, consulte o responsável pela configuração para identificar o centro correto.",
+    "parametro_sugerido": null,
+    "confianca": 0,
+    "justificativa": "Análise IA"
+  }
+}
