@@ -21,7 +21,8 @@ from sap_screen_dump import dump_screen
 def _copy_to_output(original_path: str, output_dir: str) -> str:
     ensure_dir(output_dir)
     src = Path(original_path)
-    dst = Path(output_dir) / src.name
+    name = f"Resultados de Automação - PM-Manutenção{src.suffix}"
+    dst = Path(output_dir) / name
     shutil.copy2(src, dst)
     return str(dst)
 
