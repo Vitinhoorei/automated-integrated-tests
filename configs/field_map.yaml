@@ -1,4 +1,9 @@
 IW21:
+  metadata:
+    btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+    btn_simular: "wnd[0]/tbar[1]/btn[7]" # Botão de verificar/simular
+    regex_sucesso: '(?:Nota|Aviso)\s+(\d+)' # Regex para extrair o número
+  
   "SAPLIQS0|0100":
     "Tipo de nota": 'wnd[0]/usr/ctxtRIWO00-QMART'
     "Nota": 'wnd[0]/usr/ctxtRIWO00-QMNUM'

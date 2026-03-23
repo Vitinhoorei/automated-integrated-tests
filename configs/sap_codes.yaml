@@ -1,0 +1,37 @@
+REGRAS_DE_CONTEXTO:
+  TIPO_ORDEM_X_ATIVIDADE:
+
+    ZCOR: # Se a ordem for Corretiva
+      descrição: "Manutenções corretivas programadas ou imediatas"
+      valores_validos:
+        - { codigo: "28", nome: "Corretiva Programada" }
+        - { codigo: "29", nome: "Corretiva Imediata" }
+        - { codigo: "32", nome: "Corretiva Pagamento a terceiro" }
+        - { codigo: "34", nome: "Manutenção Autônoma" }
+
+    ZMEL: # Se a ordem for Melhoria
+      descrição: "Investimentos e melhorias de processo ou segurança"
+      valores_validos:
+        - { codigo: "30", nome: "Melhoria de Processo" }
+        - { codigo: "31", nome: "Melhoria de Manutenção" }
+        - { codigo: "33", nome: "Melhoria de Segurança" }
+        - { codigo: "35", nome: "Qualidade Ferramentaria" }
+        - { codigo: "36", nome: "Produtividade Ferramentaria" }
+        - { codigo: "37", nome: "Manutenção Ferramentaria" }
+        - { codigo: "38", nome: "Produto Ferramentaria" }
+
+    ZPRE: # Se a ordem for Preventiva
+      descrição: "Planos de manutenção preventiva, preditiva ou rotas"
+      valores_validos:
+        - { codigo: "16", nome: "Preditiva" }
+        - { codigo: "17", nome: "Lubrificação" }
+        - { codigo: "18", nome: "Rotina" }
+        - { codigo: "19", nome: "Revisão" }
+        - { codigo: "20", nome: "PMP" }
+        - { codigo: "21", nome: "Rota" }
+        - { codigo: "26", nome: "Preventiva" }
+
+  PRIORIDADES:
+    - { codigo: "1", nome: "Alta" }
+    - { codigo: "2", nome: "Média" }
+    - { codigo: "3", nome: "Baixa" }

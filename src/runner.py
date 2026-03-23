@@ -57,7 +57,6 @@ def run_excel_tests(
         except ValueError as e:
             print(f"[SKIP] Aba '{sname}' ignorada: {e}")
 
-    # Validação de modo vinda da branch main
     valid_modes = {"executar", "simulado"}
 
     for item in rows:
@@ -118,17 +117,20 @@ def run_excel_tests(
                     justificativa = f"Execução concluída sem erros de primeira. Modo: {item.mode}"
                     status_print = "PASS"
 
-                msg_lower = result.message.lower()
-
-                if "nota" in msg_lower or "aviso" in msg_lower:
-                    match = re.search(r"(?:nota|aviso)\s+(\d+)", msg_lower)
-                    if match:
-                        ai.shared_context["Nota"] = match.group(1)
-
-                elif "ordem" in msg_lower:
-                    match = re.search(r"ordem\s+(\d+)", msg_lower)
-                    if match:
-                        ai.shared_context["Ordem"] = match.group(1)
+                tcode_config = sap._get_tcode_config(item.tcode)
+                regex_padrao = tcode_config.get("regex_sucesso", r"(\d+)")
+                
+                match = re.search(regex_padrao, result.message, re.IGNORECASE)
+                if match:
+                    id_gerado = match.group(1)
+                    ai.shared_context["UltimoID"] = id_gerado
+                    
+                    if "nota" in result.message.lower() or "aviso" in result.message.lower():
+                        ai.shared_context["Nota"] = id_gerado
+                    elif "ordem" in result.message.lower():
+                        ai.shared_context["Ordem"] = id_gerado
+                    
+                    print(f"ID Detectado: {id_gerado}")
 
                 write_status_with_fix_details(
                     xlsx_path=work_xlsx,

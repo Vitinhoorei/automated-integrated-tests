@@ -924,6 +924,51 @@ class SapAutomation:
     def execute_default(self) -> None:
         self.session.findById("wnd[0]").sendVKey(0)
         time.sleep(0.7)
+    
+    def _get_tcode_config(self, tcode: str) -> dict:
+        """Busca as configurações 'metadata' da transação no YAML."""
+        return self.field_map.get(tcode.upper(), {}).get("metadata", {})
+
+    def _finalizar_pelo_modo_universal(self, tcode: str, mode: str, evidence_path: str) -> SapResult:
+        """Centraliza a lógica de salvamento ou simulação para qualquer módulo."""
+        config = self._get_tcode_config(tcode)
+        is_real = self._is_real_mode(mode)
+        
+        if is_real:
+            if tcode.upper() in ["IW31", "IW34"]:
+                try: self.session.findById("wnd[0]/tbar[1]/btn[25]").press(); time.sleep(1.0)
+                except: pass
+            
+            btn_save = config.get("btn_salvar", "wnd[0]/tbar[0]/btn[11]")
+            try: self.session.findById(btn_save).press()
+            except: self.session.findById("wnd[0]").sendVKey(11)
+        else:
+            btn_sim = config.get("btn_simular")
+            if btn_sim:
+                try: self.session.findById(btn_sim).press(); time.sleep(1.0)
+                except: pass
+            self.session.findById("wnd[0]").sendVKey(0) 
+
+        time.sleep(1.5)
+        
+        popup_msgs = []
+        while self._popup_exists():
+            txt = self._popup_text(); 
+            if txt: popup_msgs.append(txt)
+            self._dismiss_popup(); time.sleep(0.5)
+
+        sb = self._statusbar_text()
+        sb_type = self._statusbar_type()
+        
+        if is_real and sb_type in {"E", "A", "X"}:
+            ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+            return SapResult("FAIL", "STATUSBAR", sb or "Erro ao salvar no SAP", ev)
+
+        ev = self._capture_success_evidence(evidence_path)
+        msg = sb or f"Processado com sucesso ({mode.upper()})"
+        if popup_msgs: msg += f" | POPUP: {' || '.join(popup_msgs)}"
+            
+        return SapResult("PASS", "OK", msg, ev)
 
     def run_tcode(
         self,
@@ -955,8 +1000,6 @@ class SapAutomation:
                 self._pending_iw31_operation_fields(params_to_fill)
             )
             order_operations_enter_done = False
-            order_operations_save_done = False
-
             is_iw32_print_flow = tcode.upper() == "IW32" and "imprimir" in (explanation or "").lower()
             iw21_z4_popup_done = False
 
@@ -972,50 +1015,11 @@ class SapAutomation:
 
                 if has_order_operation_flow:
                     pending_ops = self._pending_iw31_operation_fields(params_to_fill)
-
-                    if not pending_ops:
-                        if not order_operations_enter_done:
-                            self.session.findById("wnd[0]").sendVKey(0)
-                            time.sleep(0.8)
-                            order_operations_enter_done = True
-                            continue
-
-                        if order_operations_enter_done and not order_operations_save_done:
-                            if is_real_mode and tcode.upper() == "IW31":
-                                try:
-                                    self.session.findById("wnd[0]/tbar[1]/btn[25]").press()
-                                    time.sleep(1.0)
-                                except Exception:
-                                    pass
-
-                            saved = True
-                            if is_real_mode:
-                                saved = self._save_current_document()
-
-                            if saved:
-                                order_operations_save_done = True
-                                time.sleep(1.0)
-
-                                while self._popup_exists():
-                                    txt = self._popup_text()
-                                    if txt:
-                                        popup_msgs.append(txt)
-                                    self._dismiss_popup()
-                                    time.sleep(0.4)
-
-                                sb = self._statusbar_text()
-                                sb_type = self._statusbar_type()
-
-                                if is_real_mode and sb_type in {"E", "A", "X"}:
-                                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao salvar", ev)
-
-                                ev = self._capture_success_evidence(evidence_path)
-                                modo_txt = "REAL" if is_real_mode else "SIMULADO"
-                                msg = sb or f"Executado com sucesso ({modo_txt})"
-                                if popup_msgs:
-                                    msg += f" | POPUP: {' || '.join(popup_msgs)}"
-                                return SapResult("PASS", "OK", msg, ev)
+                    if not pending_ops and not order_operations_enter_done:
+                        self.session.findById("wnd[0]").sendVKey(0)
+                        time.sleep(0.8)
+                        order_operations_enter_done = True
+                        continue
 
                 if error_msg:
                     ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
@@ -1025,8 +1029,7 @@ class SapAutomation:
                 popups_dismissed = False
                 while self._popup_exists() and tentativas_popup < 5:
                     txt = self._popup_text()
-                    if txt:
-                        popup_msgs.append(txt)
+                    if txt: popup_msgs.append(txt)
                     self._dismiss_popup()
                     tentativas_popup += 1
                     popups_dismissed = True
@@ -1035,7 +1038,7 @@ class SapAutomation:
                 if sb_type in {"E", "A", "X"}:
                     sb = self._statusbar_text()
                     ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP", ev)
+                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP durante preenchimento", ev)
 
                 if params_to_fill:
                     if not popups_dismissed:
@@ -1053,11 +1056,24 @@ class SapAutomation:
                                 time.sleep(0.7)
 
             if params_to_fill:
-                campos_faltantes = list(params_to_fill.keys())
-                msg = f"Campos obrigatórios ausentes ou não encontrados no SAP: {campos_faltantes}"
-                ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
+                tcode_u = tcode.upper()
+                tcode_maps = self.field_map.get(tcode_u, {})
+                todos_campos_yaml = set()
+                for screen_key, fields in tcode_maps.items():
+                    if isinstance(fields, dict) and screen_key != "metadata":
+                        todos_campos_yaml.update(fields.keys())
+                
+                campos_yaml_norm = {self._norm_key(c) for c in todos_campos_yaml}
+                reais_faltantes = [
+                    k for k in params_to_fill.keys() 
+                    if self._norm_key(k) in campos_yaml_norm
+                ]
 
+                if reais_faltantes:
+                    msg = f"Campos obrigatórios mapeados no YAML não encontrados no SAP: {reais_faltantes}"
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
+                
             self.execute_default()
             time.sleep(1.5)
 
@@ -1065,46 +1081,25 @@ class SapAutomation:
                 try:
                     self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
                     time.sleep(1.5)
-
                     self.session.findById("wnd[1]/usr/tblSAPLIPRTTC_WORKPAPERS").getAbsoluteRow(8).selected = True
                     self.session.findById("wnd[1]/tbar[0]/btn[16]").press()
                     time.sleep(3.0)
                     ev = self._capture_success_evidence(evidence_path)
-                    msg = "Visualização de impressão gerada com sucesso na tela."
-
+                    msg = "Visualização de impressão gerada com sucesso."
                     try:
                         self.session.findById("wnd[0]/tbar[0]/btn[12]").press()
                         time.sleep(0.8)
-
-                        if self._popup_exists():
-                            try:
-                                self.session.findById("wnd[1]").close()
-                            except Exception:
-                                self._dismiss_popup()
-                            time.sleep(0.5)
-
+                        if self._popup_exists(): self._dismiss_popup()
                         self.session.findById("wnd[0]/tbar[0]/btn[12]").press()
-                        time.sleep(0.8)
-
-                        if self._popup_exists():
-                            if is_real_mode:
-                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
-                            else:
-                                self.session.findById("wnd[1]/usr/btnSPOP-OPTION2").press()
-                    except Exception:
-                        pass
-
-                    modo_txt = "REAL" if is_real_mode else "SIMULADO"
-                    return SapResult("PASS", "OK", f"{msg} ({modo_txt})", ev)
-
+                    except: pass
+                    return SapResult("PASS", "OK", f"{msg} ({exec_mode.upper()})", ev)
                 except Exception as e:
                     ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                    return SapResult("FAIL", "EXCEPTION", f"Falha na impressão IW32: {e}", ev)
+                    return SapResult("FAIL", "EXCEPTION", f"Falha na impressão: {e}", ev)
 
             while self._popup_exists():
                 txt = self._popup_text()
-                if txt:
-                    popup_msgs.append(txt)
+                if txt: popup_msgs.append(txt)
                 self._dismiss_popup()
                 time.sleep(0.5)
 
@@ -1113,60 +1108,10 @@ class SapAutomation:
                 try:
                     self.session.findById("wnd[0]").sendVKey(0)
                     time.sleep(0.7)
-                except Exception:
-                    pass
+                except: pass
                 tentativas_limpeza += 1
 
-            if is_real_mode:
-                botoes_salvar = ["wnd[0]/tbar[0]/btn[11]", "wnd[0]/tbar[1]/btn[11]"]
-                for _ in range(3):
-                    try:
-                        if tcode.upper() == "IW31":
-                            try:
-                                self.session.findById("wnd[0]/tbar[1]/btn[25]").press()
-                                time.sleep(1.0)
-                            except Exception:
-                                pass
-
-                        clicou = False
-                        for btn in botoes_salvar:
-                            try:
-                                self.session.findById(btn).press()
-                                clicou = True
-                                break
-                            except Exception:
-                                continue
-
-                        if not clicou:
-                            self.session.findById("wnd[0]").sendVKey(11)
-
-                        time.sleep(1.5)
-                        while self._popup_exists():
-                            txt = self._popup_text()
-                            if txt:
-                                popup_msgs.append(txt)
-                            self._dismiss_popup()
-                            time.sleep(0.5)
-
-                        break
-                    except Exception:
-                        time.sleep(1.0)
-
-            time.sleep(1.0)
-            sb = self._statusbar_text()
-            sb_type = self._statusbar_type()
-
-            if is_real_mode and sb_type in {"E", "A", "X"}:
-                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao salvar", ev)
-
-            ev = self._capture_success_evidence(evidence_path)
-            modo_txt = "REAL" if is_real_mode else "SIMULADO"
-            msg = sb or f"Executado com sucesso ({modo_txt})"
-            if popup_msgs:
-                msg += f" | POPUP: {' || '.join(popup_msgs)}"
-                
-            return SapResult("PASS", "OK", msg, ev)
+            return self._finalizar_pelo_modo_universal(tcode, exec_mode, evidence_path)
 
         except Exception as e:
             dump = dump_screen(self.session) if self.session else ""
