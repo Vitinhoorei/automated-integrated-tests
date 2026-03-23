@@ -1,0 +1,51 @@
+# PM - Manutenção
+LI: "Local de instalação"
+LOCAL INSTALACAO: "Local de instalação"
+LOCAL DE INSTALACAO: "Local de instalação"
+
+N EQUIPAMENTO: "Nº equipamento"
+NUM EQUIPAMENTO: "Nº equipamento"
+NUMERO EQUIPAMENTO: "Nº equipamento"
+EQUIPAMENTO: "Nº equipamento"
+EQUIPAM: "Nº equipamento"
+
+PRIORIDADE: "Prioridade"
+
+TRABALHO: "Trabalho"
+TRAB: "Trabalho"
+
+N COLABORADORES: "Nº colaboradores"
+NUM COLABORADORES: "Nº colaboradores"
+NUMERO COLABORADORES: "Nº colaboradores"
+N COLAB: "Nº colaboradores"
+
+IMPRIMIR: "Imprimir"
+
+TIPOATVMNT: "Tipo de atividade de manutenção"
+TIPO ATVMNT: "Tipo de atividade de manutenção"
+TIPO ATIVIDADE MANUTENCAO: "Tipo de atividade de manutenção"
+
+TXT BREVE OPERACAO: "Texto breve Operação"
+TEXTO BREVE OPERACAO: "Texto breve Operação"
+
+RAMAL: "Ramal"
+CRIAR NOTA: "Criar Nota"
+PRIORIDADE DA NOTA: "Prioridade da Nota"
+NOTIFICADOR: "Notificador"
+
+UNIDADE: "Unidade do ciclo"
+UNIDADE DO CICLO: "Unidade do ciclo"
+CTG PLANO DE MANUTENCAO: "Ctg.plano de manutenção"
+TEXTO PLANO DE MANUTENCAO: "Texto do plano de manutenção"
+DESCRICAO DA OPERACAO: "Descrição da operação"
+CAMPO ORDENAÇÃO: "Campo seleção p/planos de manutenção"
+
+ESTRATÉGIA DE MANUTENÇÃO: "Estratégia"
+ESTRATEGIA DE MANUTENCAO: "Estratégia"
+ESTRATEGIA: "Estratégia"
+
+# PP - Produção
+# MM - Materiais
+# SD - Segurança do trabalho
+# QM - Qualidade
+# FI - Faturamento
