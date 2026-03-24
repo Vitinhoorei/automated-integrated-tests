@@ -45,6 +45,13 @@ ESTRATEGIA DE MANUTENCAO: "Estratégia"
 ESTRATEGIA: "Estratégia"
 
 # PP - Produção
+Material: "Nº material para ordem"
+Centro de Produção: "Centro"
+Qtd.total: "Quantidade total de ordens"
+Tipo de Programação: "Tipo de programação"
+Texto Breve: "Texto breve de material" 
+Unidade: "Unidade de medida comum a todos os items de ordem"
+
 # MM - Materiais
 # SD - Segurança do trabalho
 # QM - Qualidade
