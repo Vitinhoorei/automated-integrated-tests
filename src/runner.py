@@ -178,6 +178,15 @@ def run_excel_tests(
                 params
             )
 
+            if result.source == "UNMAPPED_PARAM" or "ERRO_MAPEAMENTO_CO01" in (result.message or ""):
+                analise = {
+                    "causa_raiz": result.message,
+                    "sugestao_correcao": "Ajustar field_map/ID SAP do campo na tela CO01 (erro de mapeamento, não de valor).",
+                    "parametro_sugerido": None,
+                    "confianca": 100,
+                    "justificativa": "Falha de mapeamento detectada no automator; correção automática de valor foi bloqueada."
+                }
+
             causa = analise.get("causa_raiz", result.message)
             sugestao = analise.get("sugestao_correcao", "")
             confianca = analise.get("confianca", 0)

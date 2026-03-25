@@ -887,7 +887,58 @@ class SapAutomation:
                 except Exception:
                     continue
 
+        if "tipo de ordem" in self._norm_key(alias_name):
+            discovered = self._discover_usr_fields_by_suffix("AUART")
+            for obj_id, obj_type in discovered:
+                try:
+                    obj = self._find(obj_id)
+                    if obj_type == "GuiComboBox":
+                        obj.key = val
+                        return True, obj_id, "key(discovered)"
+                    obj.text = val
+                    return True, obj_id, "text(discovered)"
+                except Exception:
+                    continue
+
         return False, "", ""
+
+    def _discover_usr_fields_by_suffix(self, suffix: str) -> list[tuple[str, str]]:
+        found: list[tuple[str, str]] = []
+        try:
+            root = self.session.findById("wnd[0]/usr")
+        except Exception:
+            return found
+
+        queue = [root]
+        visited = 0
+        suffix_u = (suffix or "").upper()
+        while queue and visited < 400:
+            visited += 1
+            node = queue.pop(0)
+            try:
+                node_id = str(getattr(node, "Id", "") or "")
+                node_type = str(getattr(node, "Type", "") or "")
+                name = str(getattr(node, "Name", "") or "")
+                if node_id and suffix_u and suffix_u in node_id.upper():
+                    if node_type in {"GuiCTextField", "GuiTextField", "GuiComboBox"}:
+                        found.append((node_id, node_type))
+                elif name and suffix_u and suffix_u in name.upper():
+                    if node_type in {"GuiCTextField", "GuiTextField", "GuiComboBox"}:
+                        found.append((node_id, node_type))
+            except Exception:
+                pass
+
+            try:
+                count = int(getattr(node.Children, "Count", 0))
+                for i in range(count):
+                    try:
+                        queue.append(node.Children(i))
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+
+        return found
 
     def _confirm_popup_option(self, option: str = "nao") -> bool:
         if not self._popup_exists():
@@ -930,12 +981,13 @@ class SapAutomation:
                 }
                 still_missing = {}
                 for field, val in first_screen.items():
+                    canonical_name = "Tipo de ordem" if field == "Tipo de ordem" else field
                     if not val:
                         still_missing[field] = "valor vazio"
                         continue
                     ok, used_id, used_method = self._set_value_first_available_trace(field, fallback_ids.get(field, []), val)
                     self._debug(
-                        f"CO01 alias='{field}' valor='{val}' -> {'OK' if ok else 'FAIL'} | "
+                        f"CO01 alias='{field}' canonico='{canonical_name}' valor='{val}' -> {'OK' if ok else 'FAIL'} | "
                         f"sap_id='{used_id or 'N/A'}' | metodo='{used_method or 'N/A'}'"
                     )
                     if not ok:
@@ -943,7 +995,7 @@ class SapAutomation:
 
                 if still_missing:
                     ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
-                    return SapResult("FAIL", "UNMAPPED_PARAM", f"CO01 primeira tela não preenchida: {still_missing}", ev)
+                    return SapResult("FAIL", "UNMAPPED_PARAM", f"ERRO_MAPEAMENTO_CO01 primeira tela não preenchida: {still_missing}", ev)
 
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
