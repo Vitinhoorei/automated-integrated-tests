@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Optional
+import unicodedata
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -22,7 +23,10 @@ class SheetRow:
 
 # UTILITÁRIOS
 def _norm(value: str) -> str:
-    return str(value or "").strip().lower()
+    txt = str(value or "").strip().lower()
+    txt = unicodedata.normalize("NFD", txt)
+    txt = "".join(ch for ch in txt if unicodedata.category(ch) != "Mn")
+    return " ".join(txt.split())
 
 
 def _find_col(header_row, *names: str) -> Optional[int]:
@@ -69,8 +73,24 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     col_scen_expl = _find_col(header, "Scenario Explanation")
     col_tcode = _find_col(header, "Transação", "Transacao", "TCODE", "Transaction")
     col_test_expl = _find_col(header, "Test Explanation", "Explanation", "Test", "Descricao")
-    col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parameter")
+    col_param = _find_col(
+        header,
+        "Parâmetro",
+        "Parâmetros",
+        "Parametro",
+        "Parametros",
+        "Parameters",
+        "Parameter",
+        "Params",
+    )
     col_mode = _find_col(header, "Modo", "Mode")
+
+    header_values = [str(c.value or "").strip() for c in header]
+    print(
+        f"[SHEET-DEBUG][{sheet_name}] headers={header_values} | "
+        f"colunas_detectadas={{'Scenario': {col_scenario}, 'Scenario Explanation': {col_scen_expl}, "
+        f"'Transação': {col_tcode}, 'Test Explanation': {col_test_expl}, 'Parametros': {col_param}, 'Modo': {col_mode}}}"
+    )
     rows: List[SheetRow] =[]
 
     for r in range(2, ws.max_row + 1):
@@ -87,6 +107,8 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
         explanation = " - ".join(textos)
 
         parameter = str(ws.cell(r, col_param).value or "").strip() if col_param else ""
+        if tcode.upper() == "CO01":
+            print(f"[SHEET-DEBUG][{sheet_name} r{r}] tcode={tcode} raw_param_col='{parameter}'")
 
         raw_mode = ws.cell(r, col_mode).value if col_mode else ""
         mode = _normalize_mode(raw_mode)

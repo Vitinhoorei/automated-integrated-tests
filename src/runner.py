@@ -16,6 +16,7 @@ from planilha_local import (
 )
 from sap_automation import SapAutomation
 from sap_screen_dump import dump_screen
+from params_parser import parse_parameters
 
 
 def _copy_to_output(original_path: str, output_dir: str) -> str:
@@ -85,9 +86,10 @@ def run_excel_tests(
             item.parameter,
         )
         if item.tcode.upper() == "CO01":
+            parsed_params = parse_parameters(item.parameter)
             print(
                 f"[CO01-DEBUG][{item.sheet_name} r{item.row_index}] "
-                f"raw_param='{item.parameter}' | params_resolvidos={smart_params}"
+                f"raw_param='{item.parameter}' | params_parseados={parsed_params} | params_resolvidos={smart_params}"
             )
 
         params = smart_params.copy()
