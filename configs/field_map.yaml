@@ -167,6 +167,10 @@ CO01:
     "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
     "Inicio": "wnd[0]/usr/ctxtCAUFVD-GSTRP"
     "Tipo": "wnd[0]/usr/cmbCAUFVD-TERKZ"
+  "SAPLCOKO1|0115":
+    "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
+    "Inicio": "wnd[0]/usr/ctxtCAUFVD-GSTRP"
+    "Tipo": "wnd[0]/usr/cmbCAUFVD-TERKZ"
 
 CO02:
   metadata:
@@ -199,6 +203,13 @@ CO07:
     "Centro": "wnd[0]/usr/ctxtCAUFVD-WERKS"
     "Tipo de ordem": "wnd[0]/usr/ctxtCAUFVD-AUART"
   "SAPLCOKO1|0110":
+    "Texto breve": "wnd[0]/usr/txtCAUFVD-KTEXT"
+    "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
+    "Unidade": "wnd[0]/usr/ctxtCAUFVD-GMEIN"
+    "Tipo": "wnd[0]/usr/cmbCAUFVD-TERKZ"
+    "Aba Atribuição": "wnd[0]/usr/tabsTABSTRIP/tabpZUOR"
+    "Centro de lucro": "wnd[0]/usr/ctxtCAUFVD-PRCTR"
+  "SAPLCOKO1|0115":
     "Texto breve": "wnd[0]/usr/txtCAUFVD-KTEXT"
     "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
     "Unidade": "wnd[0]/usr/ctxtCAUFVD-GMEIN"

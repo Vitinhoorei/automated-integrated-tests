@@ -887,7 +887,9 @@ class SapAutomation:
                 except Exception:
                     continue
 
-        if "tipo de ordem" in self._norm_key(alias_name):
+        alias_norm = self._norm_key(alias_name)
+
+        if "tipo de ordem" in alias_norm:
             discovered = self._discover_usr_fields_by_suffix("AUART")
             discovered += self._discover_usr_fields_by_suffix("AUFART")
             for obj_id, obj_type in discovered:
@@ -900,6 +902,29 @@ class SapAutomation:
                     return True, obj_id, "text(discovered)"
                 except Exception:
                     continue
+
+        discovery_suffix_map = {
+            "qtd.total": ["GAMNG", "MENGE"],
+            "inicio": ["GSTRP", "STRMP"],
+            "tipo": ["TERKZ"],
+            "unidade": ["GMEIN", "MEINS"],
+            "texto breve": ["KTEXT", "LTXA1"],
+            "centro de lucro": ["PRCTR"],
+        }
+        for alias_key, suffixes in discovery_suffix_map.items():
+            if alias_key in alias_norm:
+                for suffix in suffixes:
+                    discovered = self._discover_usr_fields_by_suffix(suffix)
+                    for obj_id, obj_type in discovered:
+                        try:
+                            obj = self._find(obj_id)
+                            if obj_type == "GuiComboBox":
+                                obj.key = val
+                                return True, obj_id, f"key(discovered:{suffix})"
+                            obj.text = val
+                            return True, obj_id, f"text(discovered:{suffix})"
+                        except Exception:
+                            continue
 
         return False, "", ""
 
@@ -1139,19 +1164,41 @@ class SapAutomation:
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
             if tcode_u == "CO07":
-                self.apply_parameters_dict("CO07", {
+                co07_first = {
                     "Centro": self._get_param_value(parameters, "Centro"),
                     "Tipo de ordem": self._get_param_value(parameters, "Tipo de ordem", "Tipo"),
-                })
+                }
+                co07_first_ids = {
+                    "Centro": ["wnd[0]/usr/ctxtCAUFVD-WERKS", "wnd[0]/usr/ctxtRC27M-WERKS"],
+                    "Tipo de ordem": ["wnd[0]/usr/ctxtCAUFVD-AUFART", "wnd[0]/usr/ctxtCAUFVD-AUART", "wnd[0]/usr/ctxtRC27M-AUFART", "wnd[0]/usr/ctxtRC27M-AUART"],
+                }
+                for field, val in co07_first.items():
+                    ok, sid, met = self._set_value_first_available_trace(field, co07_first_ids.get(field, []), val)
+                    self._debug(f"CO07 alias='{field}' canonico='{field}' valor='{val}' -> {'OK' if ok else 'FAIL'} | sap_id='{sid or 'N/A'}' | metodo='{met or 'N/A'}'")
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
                 self._debug("CO07 primeira tela preenchida e ENTER executado")
-                self.apply_parameters_dict("CO07", {
+                co07_second = {
                     "Texto breve": self._get_param_value(parameters, "Texto breve"),
                     "Qtd.total": self._get_param_value(parameters, "Qtd.total"),
                     "Unidade": self._get_param_value(parameters, "Unidade"),
                     "Tipo": self._get_param_value(parameters, "Tipo"),
-                })
+                }
+                co07_second_ids = {
+                    "Texto breve": ["wnd[0]/usr/txtCAUFVD-KTEXT"],
+                    "Qtd.total": ["wnd[0]/usr/txtCAUFVD-GAMNG"],
+                    "Unidade": ["wnd[0]/usr/ctxtCAUFVD-GMEIN"],
+                    "Tipo": ["wnd[0]/usr/cmbCAUFVD-TERKZ"],
+                }
+                co07_missing = {}
+                for field, val in co07_second.items():
+                    ok, sid, met = self._set_value_first_available_trace(field, co07_second_ids.get(field, []), val)
+                    self._debug(f"CO07 alias='{field}' canonico='{field}' valor='{val}' -> {'OK' if ok else 'FAIL'} | sap_id='{sid or 'N/A'}' | metodo='{met or 'N/A'}'")
+                    if not ok and val:
+                        co07_missing[field] = val
+                if co07_missing:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", f"ERRO_MAPEAMENTO_CO07 campos obrigatórios não mapeados: {co07_missing}", ev)
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.9)
                 self._debug("CO07 segunda tela preenchida e ENTER executado")
@@ -1165,7 +1212,12 @@ class SapAutomation:
                 self._confirm_popup_option("sim")
                 self._debug("CO07 retorno F3 + popup de confirmação tratados")
                 self._select_first_available(["wnd[0]/usr/tabsTABSTRIP/tabpZUOR", "wnd[0]/usr/tabsTS_1100/tabpZUOR"])
-                self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-PRCTR"], self._get_param_value(parameters, "Centro de lucro"))
+                val_cl = self._get_param_value(parameters, "Centro de lucro")
+                ok_cl, sid_cl, met_cl = self._set_value_first_available_trace("Centro de lucro", ["wnd[0]/usr/ctxtCAUFVD-PRCTR"], val_cl)
+                self._debug(f"CO07 alias='Centro de lucro' canonico='Centro de lucro' valor='{val_cl}' -> {'OK' if ok_cl else 'FAIL'} | sap_id='{sid_cl or 'N/A'}' | metodo='{met_cl or 'N/A'}'")
+                if not ok_cl and val_cl:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", "ERRO_MAPEAMENTO_CO07 Centro de lucro não mapeado", ev)
                 self._debug("CO07 aba Atribuição preenchida (Centro de lucro)")
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
