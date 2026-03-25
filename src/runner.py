@@ -97,6 +97,7 @@ def run_excel_tests(
                 item.explanation,
                 evidence_path=evidence_path,
                 mode=mode,
+                shared_context=ai.shared_context
             )
             
             if result.status != "PASS":

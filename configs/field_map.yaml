@@ -1,3 +1,4 @@
+# PM - Manutenção
 IW21:
   metadata:
     btn_salvar: "wnd[0]/tbar[0]/btn[11]"
@@ -152,3 +153,51 @@ IP42:
     "Unidade trabalho": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-ARBEH[8,0]"
     "Duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/txtPLPOD-DAUNO[10,0]"
     "Unidade duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-DAUNE[11,0]"
+
+# PP - Produção
+CO01:
+  "SAPLCOKO1|0100":
+    "Material": 'wnd[0]/usr/ctxtCAUFVD-MATNR'
+    "Centro de Produção": 'wnd[0]/usr/ctxtCAUFVD-WERKS'
+    "Tipo de ordem": 'wnd[0]/usr/ctxtAUFPAR-PP_AUFART'
+  "SAPLCOKO1|0120":
+    "Quantidade": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/txtCAUFVD-GAMNG'
+    "Data início": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/ctxtCAUFVD-GSTRP'
+
+CO02: 
+  "SAPLCOKO1|0100":
+    "Ordem": 'wnd[0]/usr/ctxtCAUFVD-AUFNR'
+
+CO02_DATAS:
+  "SAPLCOKO1|0120":
+    "Data fim": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/ctxtCAUFVD-GLTRP'
+    "Data início": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/ctxtCAUFVD-GSTRP'
+
+CO02_LIBERAR:
+  metadata:
+    btn_liberar: "wnd[0]/tbar[1]/btn[25]"
+    btn_popup_nao: "wnd[1]/usr/btnBUTTON_2" 
+
+CO02_TECO:
+  metadata:
+    menu_teco: "wnd[0]/mbar/menu[1]/menu[8]/menu[3]"
+
+CO11N:
+  "SAPLCORU_S|0117":
+    "Ordem": 'wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-AUFNR'
+    "Operação": 'wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-VORNR'
+
+CO07:
+  "SAPLCOKO1|0100":
+    "Centro de Produção": 'wnd[0]/usr/ctxtCAUFVD-WERKS'
+    "Tipo de ordem": 'wnd[0]/usr/ctxtAUFPAR-PP_AUFART'
+  "SAPLCOKO1|0115":
+    "Descrição": 'wnd[0]/usr/txtCAUFVD-MATXT'
+    "Quantidade": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/txtCAUFVD-GAMNG'
+    "Unidade de medida": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/ctxtCAUFVD-GMEIN'
+    "Tipo de programação": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOZE/ssubSUBSCR_0115:SAPLCOKO1:0120/cmbCAUFVD-TERKZ'
+  "SAPLCOKO1|0140":
+    "Aba Atribuição": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOAL'
+    "Centro de lucro": 'wnd[0]/usr/tabsTABSTRIP_0115/tabpKOAL/ssubSUBSCR_0115:SAPLCOKO1:0140/ctxtCAUFVD-PRCTR'
+  metadata:
+    btn_gerar_operacao: "wnd[1]/usr/btnSPOP-VAROPTION3" 

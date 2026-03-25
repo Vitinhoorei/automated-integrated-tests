@@ -45,12 +45,22 @@ ESTRATEGIA DE MANUTENCAO: "Estratégia"
 ESTRATEGIA: "Estratégia"
 
 # PP - Produção
-Material: "Nº material para ordem"
-Centro de Produção: "Centro"
-Qtd.total: "Quantidade total de ordens"
-Tipo de Programação: "Tipo de programação"
-Texto Breve: "Texto breve de material" 
-Unidade: "Unidade de medida comum a todos os items de ordem"
+Nº MATERIAL: "Nº material para ordem"
+MATERIAL: "Material"
+CENTRO DE PRODUCAO: "Centro"
+CENTRO: "Centro de Produção"
+QTD TOTAL: "Quantidade"
+QUANTIDADE: "Quantidade"
+TIPO DE PROGRAMACAO: "Tipo de programação"
+TEXTO BREVE: "Descrição"
+UNIDADE: "Unidade de medida"
+UNIDADE DE MEDIDA: "Unidade de medida"
+DATA INICIO: "Data início"
+DATA BASE INICIO: "Data início"
+DATA FIM: "Data fim"
+CENTRO DE LUCRO: "Centro de lucro"
+OPERACAO: "Operação"
+NUMERO DA ORDEM: "Ordem"
 
 # MM - Materiais
 # SD - Segurança do trabalho

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from sap_screen_dump import dump_screen
-
+from param_enricher import enrich_params
 
 @dataclass
 class SapResult:
@@ -135,32 +135,25 @@ class SapAutomation:
         except Exception:
             return ""
 
-    def _dismiss_popup(self) -> None:
+    def _dismiss_popup(self, button_type: str = "YES") -> None:
         try:
             wnd1 = self.session.findById("wnd[1]")
         except Exception:
             return
 
-        botoes_confirmacao = [
-            "usr/btnSPOP-OPTION1", 
-            "usr/btnBUTTON_1",    
-            "tbar[0]/btn[0]",     
-            "tbar[0]/btn[11]"     
-        ]
+        if button_type == "NO":
+            candidates = ["usr/btnSPOP-OPTION2", "usr/btnBUTTON_2"]
+        else:
+            candidates = ["usr/btnSPOP-OPTION1", "usr/btnBUTTON_1", "tbar[0]/btn[0]", "tbar[0]/btn[11]"]
         
-        for btn in botoes_confirmacao:
+        for btn in candidates:
             try:
                 wnd1.findById(btn).press()
                 time.sleep(0.4)
                 return
             except Exception:
                 continue
-
-        try:
-            wnd1.sendVKey(0)
-            time.sleep(0.4)
-        except Exception:
-            pass
+        wnd1.sendVKey(0)
 
     def _hardcopy_wnd0(self, out_path: str) -> str:
         try:
@@ -782,6 +775,89 @@ class SapAutomation:
         except Exception as e:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "EXCEPTION", str(e), ev)
+        
+    # PP
+    def _run_pp_order_flow(self, tcode, parameters, evidence_path, mode):
+        tcode_u = tcode.upper()
+        self.open_tcode(tcode_u)
+        fluxo = parameters.get("_FLUXO", "PADRAO")
+        time.sleep(1.0)
+        self.apply_parameters_dict(tcode_u, parameters)
+        
+        if tcode_u == "CO02":
+            for sub_key in ["CO02_DATAS", "CO02_LIBERAR", "CO02_TECO"]:
+                if sub_key in self.field_map:
+                    self.apply_parameters_dict(sub_key, parameters)
+
+        self.session.findById("wnd[0]").sendVKey(0) 
+        time.sleep(1.0)
+        
+        if tcode_u == "CO02":
+            self.session.findById("wnd[0]").sendVKey(0) 
+            time.sleep(0.8)
+
+        if tcode_u == "CO01":
+            self.apply_parameters_dict("CO01", parameters)
+            self.session.findById("wnd[0]").sendVKey(0) 
+            
+        elif tcode_u == "CO02":
+            if fluxo == "DATAS":
+                try:
+                    self.session.findById(self.field_map["CO02_DATAS"]["SAPLCOKO1|0120"]["Data fim"]).text = ""
+                except: pass
+                
+                self.apply_parameters_dict("CO02_DATAS", parameters)
+                self.session.findById("wnd[0]").sendVKey(0) 
+                
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+                time.sleep(0.8)
+                if self._popup_exists(): 
+                    self._dismiss_popup("NO") 
+                
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
+                
+            elif fluxo == "LIBERAR_IMPRIMIR":
+                self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_liberar"]).press()
+                if self._popup_exists(): 
+                    self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_popup_nao"]).press()
+                
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
+                
+            elif fluxo == "TECO":
+                self.session.findById(self.field_map["CO02_TECO"]["metadata"]["menu_teco"]).select()
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+
+        return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+    def _run_pp_co11n_flow(self, parameters, evidence_path, mode):
+        ops = parameters.get("_LISTA_OPERACOES", ["0010"])
+        for op in ops:
+            self.open_tcode("CO11N")
+            self.apply_parameters_dict("CO11N", {"Ordem": parameters.get("Ordem"), "Operação": op})
+            self.session.findById("wnd[0]").sendVKey(0)
+            self._finalizar_pelo_modo_universal("CO11N", mode, evidence_path)
+        return SapResult("PASS", "OK", "Apontamento(s) realizado(s)")
+
+    def _run_pp_co07_flow(self, parameters, evidence_path, mode):
+        self.open_tcode("CO07")
+        self.apply_parameters_dict("CO07", parameters)
+        self.session.findById("wnd[0]").sendVKey(0)
+        self.apply_parameters_dict("CO07", parameters)
+        self.session.findById("wnd[0]").sendVKey(0)
+        
+        if self._popup_exists():
+            self.session.findById(self.field_map["CO07"]["metadata"]["btn_gerar_operacao"]).press()
+            time.sleep(1.0)
+            
+        self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
+        if self._popup_exists():
+            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+            
+        self.session.findById(self.field_map["CO07"]["SAPLCOKO1|0140"]["Aba Atribuição"]).select()
+        self.apply_parameters_dict("CO07", parameters)
+        self.session.findById("wnd[0]").sendVKey(0)
+        
+        return self._finalizar_pelo_modo_universal("CO07", mode, evidence_path)
     
     def _find(self, sap_id: str):
         try:
@@ -977,30 +1053,43 @@ class SapAutomation:
         explanation: str,
         evidence_path: str = "",
         mode: str = "real",
+        shared_context: dict = None
     ) -> SapResult:
         try:
             self._ensure_session()
-            self.open_tcode(tcode)
-
+            tcode_u = tcode.upper()
             exec_mode = self._normalize_mode(mode)
-            is_real_mode = self._is_real_mode(exec_mode)
-
-            if tcode.upper() == "IW41":
+            
+            parameters = enrich_params(tcode, explanation, "", shared_context=shared_context)
+            parameters.update({k: v for k, v in parameters.items() if v}) 
+            
+            if tcode_u == "IW41":
                 return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
 
-            if tcode.upper() in ["IP41", "IP42"]:
+            if tcode_u in ["IP41", "IP42"]:
                 return self._run_ip41_ip42_flow(tcode, parameters, explanation, evidence_path, mode=exec_mode)
+
+            if tcode_u in ["CO01", "CO02"]:
+                return self._run_pp_order_flow(tcode, parameters, evidence_path, exec_mode)
+
+            if tcode_u == "CO11N":
+                return self._run_pp_co11n_flow(parameters, evidence_path, exec_mode)
+
+            if tcode_u == "CO07":
+                return self._run_pp_co07_flow(parameters, evidence_path, exec_mode)
+            
+            self.open_tcode(tcode)
 
             params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
             popup_msgs = []
             max_telas = 15
             tela_atual = 0
 
-            has_order_operation_flow = tcode.upper() in {"IW31", "IW34"} and bool(
+            has_order_operation_flow = tcode_u in {"IW31", "IW34"} and bool(
                 self._pending_iw31_operation_fields(params_to_fill)
             )
             order_operations_enter_done = False
-            is_iw32_print_flow = tcode.upper() == "IW32" and "imprimir" in (explanation or "").lower()
+            is_iw32_print_flow = tcode_u == "IW32" and "imprimir" in (explanation or "").lower()
             iw21_z4_popup_done = False
 
             while params_to_fill and tela_atual < max_telas:
@@ -1008,7 +1097,7 @@ class SapAutomation:
                 self._handle_all_popups()
                 params_to_fill, error_msg, action_taken = self.apply_parameters_dict(tcode, params_to_fill)
                 
-                if tcode.upper() == "IW21" and not iw21_z4_popup_done:
+                if tcode_u == "IW21" and not iw21_z4_popup_done:
                     popup_handled = self._handle_iw21_z4_popup(parameters)
                     if popup_handled:
                         iw21_z4_popup_done = True
@@ -1048,7 +1137,7 @@ class SapAutomation:
                         elif action_taken == "NONE":
                             if has_order_operation_flow and order_operations_enter_done:
                                 time.sleep(0.3)
-                            elif str(self.session.Info.Program).strip() == "SAPLIQS0" and tcode.upper() == "IW31":
+                            elif str(self.session.Info.Program).strip() == "SAPLIQS0" and tcode_u == "IW31":
                                 self.session.findById("wnd[0]").sendVKey(3)
                                 time.sleep(0.7)
                             else:
@@ -1056,7 +1145,6 @@ class SapAutomation:
                                 time.sleep(0.7)
 
             if params_to_fill:
-                tcode_u = tcode.upper()
                 tcode_maps = self.field_map.get(tcode_u, {})
                 todos_campos_yaml = set()
                 for screen_key, fields in tcode_maps.items():
@@ -1077,7 +1165,7 @@ class SapAutomation:
             self.execute_default()
             time.sleep(1.5)
 
-            if is_iw32_print_flow and tcode.upper() == "IW32":
+            if is_iw32_print_flow and tcode_u == "IW32":
                 try:
                     self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
                     time.sleep(1.5)
