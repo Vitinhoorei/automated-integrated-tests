@@ -854,6 +854,41 @@ class SapAutomation:
                 continue
         return False
 
+    def _set_value_first_available_trace(self, alias_name: str, candidates: list[str], value: str) -> tuple[bool, str, str]:
+        if value is None:
+            return False, "", ""
+        val = str(value).strip()
+        for obj_id in candidates:
+            try:
+                obj = self._find(obj_id)
+                obj_type = str(getattr(obj, "Type", ""))
+                if obj_type == "GuiComboBox":
+                    obj.key = val
+                    return True, obj_id, "key"
+                try:
+                    obj.text = val
+                    return True, obj_id, "text"
+                except Exception:
+                    obj.key = val
+                    return True, obj_id, "key"
+            except Exception:
+                continue
+
+        tech_candidates = ["CAUFVD-AUART", "RC27M-AUART"] if "tipo de ordem" in self._norm_key(alias_name) else []
+        for tech_name in tech_candidates:
+            for obj_type in ["GuiCTextField", "GuiTextField", "GuiComboBox"]:
+                try:
+                    obj = self.session.findById("wnd[0]/usr").findByName(tech_name, obj_type)
+                    if obj_type == "GuiComboBox":
+                        obj.key = val
+                        return True, f"findByName:{tech_name}", "key"
+                    obj.text = val
+                    return True, f"findByName:{tech_name}", "text"
+                except Exception:
+                    continue
+
+        return False, "", ""
+
     def _confirm_popup_option(self, option: str = "nao") -> bool:
         if not self._popup_exists():
             return False
@@ -871,7 +906,12 @@ class SapAutomation:
                 first_screen = {
                     "Material": self._get_param_value(parameters, "Material"),
                     "Centro de produção": self._get_param_value(parameters, "Centro de produção", "Centro"),
-                    "Tipo de ordem": self._get_param_value(parameters, "Tipo de ordem", "Tipo"),
+                    "Tipo de ordem": self._get_param_value(
+                        parameters,
+                        "Tipo de ordem",
+                        "Tipo de ordem para ordens de produção",
+                        "Tipo",
+                    ),
                 }
                 self._debug(f"CO01 params primeira tela: {first_screen}")
                 remaining, _, _ = self.apply_parameters_dict("CO01", first_screen)
@@ -881,15 +921,23 @@ class SapAutomation:
                 fallback_ids = {
                     "Material": ["wnd[0]/usr/ctxtRC27M-MATNR", "wnd[0]/usr/ctxtCAUFVD-MATNR"],
                     "Centro de produção": ["wnd[0]/usr/ctxtRC27M-WERKS", "wnd[0]/usr/ctxtCAUFVD-WERKS"],
-                    "Tipo de ordem": ["wnd[0]/usr/ctxtRC27M-AUART", "wnd[0]/usr/ctxtCAUFVD-AUART"],
+                    "Tipo de ordem": [
+                        "wnd[0]/usr/ctxtCAUFVD-AUART",
+                        "wnd[0]/usr/ctxtRC27M-AUART",
+                        "wnd[0]/usr/cmbCAUFVD-AUART",
+                        "wnd[0]/usr/cmbRC27M-AUART",
+                    ],
                 }
                 still_missing = {}
                 for field, val in first_screen.items():
                     if not val:
                         still_missing[field] = "valor vazio"
                         continue
-                    ok = self._set_value_first_available(fallback_ids.get(field, []), val)
-                    self._debug(f"CO01 set {field}='{val}' -> {'OK' if ok else 'FAIL'}")
+                    ok, used_id, used_method = self._set_value_first_available_trace(field, fallback_ids.get(field, []), val)
+                    self._debug(
+                        f"CO01 alias='{field}' valor='{val}' -> {'OK' if ok else 'FAIL'} | "
+                        f"sap_id='{used_id or 'N/A'}' | metodo='{used_method or 'N/A'}'"
+                    )
                     if not ok:
                         still_missing[field] = val
 
