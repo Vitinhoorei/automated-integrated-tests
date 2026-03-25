@@ -811,6 +811,160 @@ class SapAutomation:
 
         return self.session.findById(sap_id)
 
+    def _press_first_available(self, candidates: list[str], sleep_s: float = 0.7) -> bool:
+        for obj_id in candidates:
+            try:
+                self._find(obj_id).press()
+                time.sleep(sleep_s)
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _select_first_available(self, candidates: list[str], sleep_s: float = 0.5) -> bool:
+        for obj_id in candidates:
+            try:
+                self._find(obj_id).select()
+                time.sleep(sleep_s)
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _set_value_first_available(self, candidates: list[str], value: str) -> bool:
+        if value is None:
+            return False
+        val = str(value).strip()
+        for obj_id in candidates:
+            try:
+                obj = self._find(obj_id)
+                obj_type = str(getattr(obj, "Type", ""))
+                if obj_type == "GuiComboBox":
+                    obj.key = val
+                else:
+                    try:
+                        obj.text = val
+                    except Exception:
+                        obj.key = val
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _confirm_popup_option(self, option: str = "nao") -> bool:
+        if not self._popup_exists():
+            return False
+        option = (option or "nao").strip().lower()
+        prefer = ["wnd[1]/usr/btnSPOP-OPTION2", "wnd[1]/usr/btnBUTTON_2"] if option in {"nao", "não", "n"} else ["wnd[1]/usr/btnSPOP-OPTION1", "wnd[1]/usr/btnBUTTON_1"]
+        fallback = ["wnd[1]/tbar[0]/btn[0]", "wnd[1]/tbar[0]/btn[11]"]
+        return self._press_first_available(prefer + fallback, sleep_s=0.8)
+
+    def _run_pp_flow(self, tcode: str, parameters: dict, explanation: str, evidence_path: str = "", mode: str = "real") -> SapResult:
+        try:
+            tcode_u = (tcode or "").upper().strip()
+            exp = (explanation or "").lower()
+
+            if tcode_u == "CO01":
+                self.apply_parameters_dict("CO01", {
+                    "Material": self._get_param_value(parameters, "Material"),
+                    "Centro de produção": self._get_param_value(parameters, "Centro de produção", "Centro"),
+                    "Tipo de ordem": self._get_param_value(parameters, "Tipo de ordem", "Tipo"),
+                })
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+
+                self.apply_parameters_dict("CO01", {
+                    "Qtd.total": self._get_param_value(parameters, "Qtd.total", "Quantidade total"),
+                    "Inicio": self._get_param_value(parameters, "Inicio", "Data início"),
+                    "Tipo": self._get_param_value(parameters, "Tipo"),
+                })
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+                return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+            if tcode_u == "CO02":
+                self.apply_parameters_dict("CO02", {"Ordem": self._get_param_value(parameters, "Ordem")})
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+
+                if "data" in exp:
+                    self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-GLTRP"], "")
+                    self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-GSTRP"], self._get_param_value(parameters, "Inicio", "Data início"))
+                    self._safe_press_save(mode=mode)
+                    self._confirm_popup_option("nao")
+                    self._safe_press_save(mode=mode)
+                    return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+                if "imprim" in exp or "spool" in exp or "liberar" in exp:
+                    self._press_first_available(["wnd[0]/tbar[1]/btn[23]", "wnd[0]/tbar[1]/btn[24]"])
+                    self._confirm_popup_option("nao")
+                    self._press_first_available(["wnd[0]/tbar[1]/btn[86]", "wnd[0]/tbar[0]/btn[86]"], sleep_s=1.0)
+                    if self._popup_exists():
+                        self._confirm_popup_option("sim")
+                    return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+                if "encerr" in exp or "tecnic" in exp:
+                    if not self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]/menu[0]", "wnd[0]/mbar/menu[4]/menu[2]/menu[0]"]):
+                        self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]", "wnd[0]/mbar/menu[4]/menu[2]"])
+                        self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]/menu[0]", "wnd[0]/mbar/menu[4]/menu[2]/menu[0]"])
+                    return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+                return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+            if tcode_u == "CO11N":
+                self.apply_parameters_dict("CO11N", {"Ordem": self._get_param_value(parameters, "Ordem")})
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+
+                ops_raw = self._get_param_value(parameters, "Operações", "Operacao", "Operação")
+                ops = [o.strip() for o in re.split(r"[;,|]", ops_raw) if o.strip()] or [self._get_param_value(parameters, "Operação")]
+                ops = [o for o in ops if o]
+
+                if not ops:
+                    self._safe_press_save(mode=mode)
+                    return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+                for op in ops:
+                    self._set_value_first_available(["wnd[0]/usr/ctxtAFRUD-VORNR"], op)
+                    self.session.findById("wnd[0]").sendVKey(0)
+                    time.sleep(0.7)
+                    self._safe_press_save(mode=mode)
+                    time.sleep(0.6)
+                return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+            if tcode_u == "CO07":
+                self.apply_parameters_dict("CO07", {
+                    "Centro": self._get_param_value(parameters, "Centro"),
+                    "Tipo de ordem": self._get_param_value(parameters, "Tipo de ordem", "Tipo"),
+                })
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+                self.apply_parameters_dict("CO07", {
+                    "Texto breve": self._get_param_value(parameters, "Texto breve"),
+                    "Qtd.total": self._get_param_value(parameters, "Qtd.total"),
+                    "Unidade": self._get_param_value(parameters, "Unidade"),
+                    "Tipo": self._get_param_value(parameters, "Tipo"),
+                })
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.9)
+                self._confirm_popup_option("sim")
+                try:
+                    self.session.findById("wnd[0]").sendVKey(3)
+                    time.sleep(0.7)
+                except Exception:
+                    pass
+                self._confirm_popup_option("sim")
+                self._select_first_available(["wnd[0]/usr/tabsTABSTRIP/tabpZUOR", "wnd[0]/usr/tabsTS_1100/tabpZUOR"])
+                self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-PRCTR"], self._get_param_value(parameters, "Centro de lucro"))
+                return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
+
+            return SapResult("FAIL", "UNSUPPORTED", f"Fluxo PP não suportado para {tcode_u}", "")
+        except Exception as e:
+            ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+            return SapResult("FAIL", "EXCEPTION", f"{e}", ev)
+
     def apply_parameters_dict(self, tcode: str, params: dict[str, str]) -> tuple[dict[str, str], str, str]:
         self._ensure_session()
         if not params:
@@ -990,6 +1144,9 @@ class SapAutomation:
 
             if tcode.upper() in ["IP41", "IP42"]:
                 return self._run_ip41_ip42_flow(tcode, parameters, explanation, evidence_path, mode=exec_mode)
+
+            if tcode.upper() in ["CO01", "CO02", "CO07", "CO11N"]:
+                return self._run_pp_flow(tcode, parameters, explanation, evidence_path, mode=exec_mode)
 
             params_to_fill = {k: v for k, v in (parameters or {}).items() if v is not None and str(v).strip() != ""}
             popup_msgs = []

@@ -55,6 +55,16 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         "campo ordenacao": "Campo Ordenação",
         "estrategia de manutencao": "Estratégia",
         "estrategia": "Estratégia",
+        "centro de producao": "Centro de produção",
+        "qtd total": "Qtd.total",
+        "quantidade total": "Qtd.total",
+        "inicio": "Inicio",
+        "data inicio": "Inicio",
+        "tipo ordem": "Tipo de ordem",
+        "texto breve": "Texto breve",
+        "centro de lucro": "Centro de lucro",
+        "operacao": "Operação",
+        "operacoes": "Operações",
     }
 
     normalized: dict[str, str] = {}
@@ -100,5 +110,15 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         val_prog = str(params.get("Campo Ordenação", "")).strip().lower()
         if val_prog in["manut utilitários", "manut utilitarios", "manut. utilitários"]:
             params["Campo Ordenação"] = "M8"
+
+    if tcode_u in ["CO01", "CO07"]:
+        if "Tipo" in params and str(params["Tipo"]).strip().upper() in {"ZMS1", "ZSE1"}:
+            params["Tipo de ordem"] = str(params["Tipo"]).strip().upper()
+
+    if tcode_u == "CO01":
+        params.setdefault("Tipo", "Para a frente")
+
+    if tcode_u == "CO07":
+        params.setdefault("Tipo", "Data do dia padrão")
 
     return params

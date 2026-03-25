@@ -152,3 +152,52 @@ IP42:
     "Unidade trabalho": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-ARBEH[8,0]"
     "Duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/txtPLPOD-DAUNO[10,0]"
     "Unidade duração": "wnd[0]/usr/tblSAPLCPDITCTRL_3400/ctxtPLPOD-DAUNE[11,0]"
+
+CO01:
+  metadata:
+    btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+  "SAPLCOKO1|0100":
+    "Material": "wnd[0]/usr/ctxtCAUFVD-MATNR"
+    "Centro de produção": "wnd[0]/usr/ctxtCAUFVD-WERKS"
+    "Tipo de ordem": "wnd[0]/usr/ctxtCAUFVD-AUART"
+  "SAPLCOKO1|0110":
+    "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
+    "Inicio": "wnd[0]/usr/ctxtCAUFVD-GSTRP"
+    "Tipo": "wnd[0]/usr/cmbCAUFVD-TERKZ"
+
+CO02:
+  metadata:
+    btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+  "SAPLCOKO1|0100":
+    "Ordem": "wnd[0]/usr/ctxtCAUFVD-AUFNR"
+  "SAPLCOKO1|0110":
+    "Inicio": "wnd[0]/usr/ctxtCAUFVD-GSTRP"
+    "Fim": "wnd[0]/usr/ctxtCAUFVD-GLTRP"
+    "Liberar": "wnd[0]/tbar[1]/btn[23]"
+    "Imprimir spool": "wnd[0]/tbar[1]/btn[86]"
+    "Menu Funções": "wnd[0]/mbar/menu[3]"
+    "Menu Limitar processamento": "wnd[0]/mbar/menu[3]/menu[8]"
+    "Menu Concluir tecnicamente": "wnd[0]/mbar/menu[3]/menu[8]/menu[0]"
+
+CO11N:
+  metadata:
+    btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+  "SAPLCORU|1000":
+    "Ordem": "wnd[0]/usr/ctxtAFRUD-AUFNR"
+    "Operação": "wnd[0]/usr/ctxtAFRUD-VORNR"
+    "Ajuda operação": "wnd[0]/usr/btn%#AUTOTEXT001"
+    "Tabela operações popup": "wnd[1]/usr/tblSAPLCORUT"
+
+CO07:
+  metadata:
+    btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+  "SAPLCOKO1|0100":
+    "Centro": "wnd[0]/usr/ctxtCAUFVD-WERKS"
+    "Tipo de ordem": "wnd[0]/usr/ctxtCAUFVD-AUART"
+  "SAPLCOKO1|0110":
+    "Texto breve": "wnd[0]/usr/txtCAUFVD-KTEXT"
+    "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
+    "Unidade": "wnd[0]/usr/ctxtCAUFVD-GMEIN"
+    "Tipo": "wnd[0]/usr/cmbCAUFVD-TERKZ"
+    "Aba Atribuição": "wnd[0]/usr/tabsTABSTRIP/tabpZUOR"
+    "Centro de lucro": "wnd[0]/usr/ctxtCAUFVD-PRCTR"

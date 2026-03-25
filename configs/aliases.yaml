@@ -45,6 +45,25 @@ ESTRATEGIA DE MANUTENCAO: "Estratégia"
 ESTRATEGIA: "Estratégia"
 
 # PP - Produção
+QTD TOTAL: "Qtd.total"
+QUANTIDADE TOTAL: "Qtd.total"
+DATA INICIO: "Inicio"
+DATA INÍCIO: "Inicio"
+TIPO ORDEM: "Tipo de ordem"
+CENTRO DE PRODUCAO: "Centro de produção"
+CENTRO DE PRODUÇÃO: "Centro de produção"
+CENTRO: "Centro"
+TEXTO BREVE: "Texto breve"
+CENTRO DE LUCRO: "Centro de lucro"
+OPERACAO: "Operação"
+OPERAÇÃO: "Operação"
+OPERACOES: "Operações"
+OPERAÇÕES: "Operações"
+LIBERAR: "Liberar"
+IMPRIMIR SPOOL: "Imprimir spool"
+ENCERRAMENTO TECNICO: "Encerramento técnico"
+ENCERRAMENTO TÉCNICO: "Encerramento técnico"
+
 # MM - Materiais
 # SD - Segurança do trabalho
 # QM - Qualidade

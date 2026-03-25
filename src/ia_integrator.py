@@ -63,7 +63,7 @@ class AITestIntegrator:
             if "Nota" not in params and "Nota" in self.shared_context:
                 params["Nota"] = self.shared_context["Nota"]
 
-        if tcode_u in ["IW32", "IW41"]:
+        if tcode_u in ["IW32", "IW41", "CO02", "CO11N"]:
             if "Ordem" not in params and "Ordem" in self.shared_context:
                 params["Ordem"] = self.shared_context["Ordem"]
 
@@ -116,7 +116,7 @@ class AITestIntegrator:
             pass
 
         prompt = f"""
-                    Você é um especialista em SAP PM. O teste falhou.
+                    Você é um especialista em SAP (PM/PP). O teste falhou.
                     TCODE: {tcode}
                     MENSAGEM SAP: {status_message}
 

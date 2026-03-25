@@ -95,8 +95,13 @@ Atualmente o sistema executa cenários envolvendo as seguintes transações:
 * IW41
 * IP41
 * IP42
+* CO01
+* CO02
+* CO07
+* CO11N
 
 Essas transações fazem parte dos fluxos de **manutenção e planejamento no SAP PM**.
+Também há suporte inicial para fluxos de **produção no SAP PP**.
 
 ---
 
@@ -246,8 +251,12 @@ The system currently executes scenarios involving the following SAP transactions
 * IW41
 * IP41
 * IP42
+* CO01
+* CO02
+* CO07
+* CO11N
 
-These transactions are part of **maintenance and planning flows within SAP PM**.
+These transactions cover **SAP PM** flows and an initial **SAP PP** automation layer.
 
 ---
 
