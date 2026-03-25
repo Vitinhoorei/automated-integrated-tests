@@ -782,80 +782,120 @@ class SapAutomation:
         self.open_tcode(tcode_u)
         fluxo = parameters.get("_FLUXO", "PADRAO")
         time.sleep(1.0)
-        self.apply_parameters_dict(tcode_u, parameters)
         
-        if tcode_u == "CO02":
-            for sub_key in ["CO02_DATAS", "CO02_LIBERAR", "CO02_TECO"]:
-                if sub_key in self.field_map:
-                    self.apply_parameters_dict(sub_key, parameters)
-
+        self.apply_parameters_dict(tcode_u, parameters)
         self.session.findById("wnd[0]").sendVKey(0) 
         time.sleep(1.0)
         
-        if tcode_u == "CO02":
-            self.session.findById("wnd[0]").sendVKey(0) 
-            time.sleep(0.8)
-
         if tcode_u == "CO01":
             self.apply_parameters_dict("CO01", parameters)
             self.session.findById("wnd[0]").sendVKey(0) 
+            time.sleep(0.8)
+            return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
             
         elif tcode_u == "CO02":
+            if self._popup_exists():
+                self.session.findById("wnd[1]").sendVKey(0)
+                
             if fluxo == "DATAS":
                 try:
                     self.session.findById(self.field_map["CO02_DATAS"]["SAPLCOKO1|0120"]["Data fim"]).text = ""
-                except: pass
-                
+                except: 
+                    pass
                 self.apply_parameters_dict("CO02_DATAS", parameters)
-                self.session.findById("wnd[0]").sendVKey(0) 
                 
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
                 time.sleep(0.8)
                 if self._popup_exists(): 
                     self._dismiss_popup("NO") 
-                
+                    time.sleep(0.5)
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
                 
             elif fluxo == "LIBERAR_IMPRIMIR":
-                self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_liberar"]).press()
-                if self._popup_exists(): 
-                    self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_popup_nao"]).press()
+                try:
+                    self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_liberar"]).press()
+                except:
+                    self.session.findById("wnd[0]/tbar[1]/btn[25]").press() # ID Padrão Bandeira
+                time.sleep(0.5)
                 
+                if self._popup_exists(): 
+                    self._dismiss_popup("NO")
+                    time.sleep(0.5)
+                
+                try:
+                    self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
+                except:
+                    self.session.findById("wnd[0]").sendVKey(86)
+                time.sleep(1.0)
+                
+                if self._popup_exists():
+                    self.session.findById("wnd[1]").sendVKey(0) 
+                    time.sleep(0.5)
+                    
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
                 
             elif fluxo == "TECO":
-                self.session.findById(self.field_map["CO02_TECO"]["metadata"]["menu_teco"]).select()
+                try:
+                    self.session.findById(self.field_map["CO02_TECO"]["metadata"]["menu_teco"]).select()
+                except:
+                    pass
+                time.sleep(0.5)
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
 
         return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
     def _run_pp_co11n_flow(self, parameters, evidence_path, mode):
-        ops = parameters.get("_LISTA_OPERACOES", ["0010"])
-        for op in ops:
+        ops_str = parameters.get("Operação", "0010") 
+        operacoes_lista = [op.strip() for op in str(ops_str).split(",")]
+        
+        ordem = parameters.get("Ordem", self.shared_context.get("Ordem", ""))
+        
+        for op in operacoes_lista:
             self.open_tcode("CO11N")
-            self.apply_parameters_dict("CO11N", {"Ordem": parameters.get("Ordem"), "Operação": op})
+            self.apply_parameters_dict("CO11N", {"Ordem": ordem, "Operação": op})
             self.session.findById("wnd[0]").sendVKey(0)
+            time.sleep(0.8)
+            
+            if self._popup_exists():
+                self.session.findById("wnd[1]").sendVKey(0)
+                time.sleep(0.5)
+            
             self._finalizar_pelo_modo_universal("CO11N", mode, evidence_path)
-        return SapResult("PASS", "OK", "Apontamento(s) realizado(s)")
+            
+        return SapResult("PASS", "OK", f"Apontamento concluído para as operações: {ops_str}")
 
     def _run_pp_co07_flow(self, parameters, evidence_path, mode):
         self.open_tcode("CO07")
         self.apply_parameters_dict("CO07", parameters)
         self.session.findById("wnd[0]").sendVKey(0)
+        time.sleep(1.0)
+        
+        parameters["Tipo de programação"] = "Data do dia"
         self.apply_parameters_dict("CO07", parameters)
         self.session.findById("wnd[0]").sendVKey(0)
+        time.sleep(0.8)
         
         if self._popup_exists():
-            self.session.findById(self.field_map["CO07"]["metadata"]["btn_gerar_operacao"]).press()
+            try:
+                self.session.findById(self.field_map["CO07"]["metadata"]["btn_gerar_operacao"]).press()
+            except:
+                self.session.findById("wnd[1]/usr/btnSPOP-VAROPTION3").press()
             time.sleep(1.0)
             
-        self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
+        self.session.findById("wnd[0]").sendVKey(3)
+        time.sleep(0.8)
+        
         if self._popup_exists():
-            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+            self.session.findById("wnd[1]").sendVKey(0)
+            time.sleep(0.5)
             
-        self.session.findById(self.field_map["CO07"]["SAPLCOKO1|0140"]["Aba Atribuição"]).select()
-        self.apply_parameters_dict("CO07", parameters)
-        self.session.findById("wnd[0]").sendVKey(0)
+        try:
+            self.session.findById(self.field_map["CO07"]["SAPLCOKO1|0140"]["Aba Atribuição"]).select()
+            time.sleep(0.5)
+            self.apply_parameters_dict("CO07", parameters)
+            self.session.findById("wnd[0]").sendVKey(0)
+        except Exception as e:
+            print(f"Aviso: Falha ao acessar aba de Atribuição na CO07: {e}")
         
         return self._finalizar_pelo_modo_universal("CO07", mode, evidence_path)
     
@@ -1058,10 +1098,8 @@ class SapAutomation:
         try:
             self._ensure_session()
             tcode_u = tcode.upper()
-            exec_mode = self._normalize_mode(mode)
-            
-            parameters = enrich_params(tcode, explanation, "", shared_context=shared_context)
-            parameters.update({k: v for k, v in parameters.items() if v}) 
+            exec_mode = self._normalize_mode(mode) 
+            print(f"\n[DEBUG SAP] Iniciando {tcode_u} | Parâmetros recebidos: {parameters}")
             
             if tcode_u == "IW41":
                 return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
@@ -1070,6 +1108,17 @@ class SapAutomation:
                 return self._run_ip41_ip42_flow(tcode, parameters, explanation, evidence_path, mode=exec_mode)
 
             if tcode_u in ["CO01", "CO02"]:
+                if tcode_u == "CO02":
+                    expl = (explanation or "").lower()
+                    if "datas" in expl:
+                        parameters["_FLUXO"] = "DATAS"
+                    elif "imprimir" in expl or "liberar" in expl or "spool" in expl:
+                        parameters["_FLUXO"] = "LIBERAR_IMPRIMIR"
+                    elif "teco" in expl or "técnico" in expl or "encerramento" in expl:
+                        parameters["_FLUXO"] = "TECO"
+                    else:
+                        parameters["_FLUXO"] = "PADRAO"
+                        
                 return self._run_pp_order_flow(tcode, parameters, evidence_path, exec_mode)
 
             if tcode_u == "CO11N":

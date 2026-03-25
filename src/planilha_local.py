@@ -69,7 +69,7 @@ def read_rows(xlsx_path: str, sheet_name: str) -> List[SheetRow]:
     col_scen_expl = _find_col(header, "Scenario Explanation")
     col_tcode = _find_col(header, "Transação", "Transacao", "TCODE", "Transaction")
     col_test_expl = _find_col(header, "Test Explanation", "Explanation", "Test", "Descricao")
-    col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parameter")
+    col_param = _find_col(header, "Parâmetro", "Parametro", "Parameters", "Parametros")
     col_mode = _find_col(header, "Modo", "Mode")
     rows: List[SheetRow] =[]
 
