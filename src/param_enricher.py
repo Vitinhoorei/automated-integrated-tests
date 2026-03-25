@@ -111,6 +111,9 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         if val_prog in["manut utilitários", "manut utilitarios", "manut. utilitários"]:
             params["Campo Ordenação"] = "M8"
 
+    if tcode_u == "CO01" and tipo:
+        params["Tipo de ordem"] = tipo
+
     if tcode_u in ["CO01", "CO07"]:
         if "Tipo" in params and str(params["Tipo"]).strip().upper() in {"ZMS1", "ZSE1"}:
             params["Tipo de ordem"] = str(params["Tipo"]).strip().upper()

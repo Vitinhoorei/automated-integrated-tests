@@ -42,6 +42,9 @@ class SapAutomation:
             return {str(k).upper(): (v or {}) for k, v in data.items()}
         except FileNotFoundError:
             return {}
+
+    def _debug(self, msg: str) -> None:
+        print(f"[SAP-DEBUG] {msg}")
         
     def go_to_initial_screen(self) -> None:
         """Força a volta para a tela inicial limpando inclusive popups de saída."""
@@ -865,11 +868,35 @@ class SapAutomation:
             exp = (explanation or "").lower()
 
             if tcode_u == "CO01":
-                self.apply_parameters_dict("CO01", {
+                first_screen = {
                     "Material": self._get_param_value(parameters, "Material"),
                     "Centro de produção": self._get_param_value(parameters, "Centro de produção", "Centro"),
                     "Tipo de ordem": self._get_param_value(parameters, "Tipo de ordem", "Tipo"),
-                })
+                }
+                self._debug(f"CO01 params primeira tela: {first_screen}")
+                remaining, _, _ = self.apply_parameters_dict("CO01", first_screen)
+                if remaining:
+                    self._debug(f"CO01 campos pendentes após apply_parameters_dict: {remaining}")
+
+                fallback_ids = {
+                    "Material": ["wnd[0]/usr/ctxtRC27M-MATNR", "wnd[0]/usr/ctxtCAUFVD-MATNR"],
+                    "Centro de produção": ["wnd[0]/usr/ctxtRC27M-WERKS", "wnd[0]/usr/ctxtCAUFVD-WERKS"],
+                    "Tipo de ordem": ["wnd[0]/usr/ctxtRC27M-AUART", "wnd[0]/usr/ctxtCAUFVD-AUART"],
+                }
+                still_missing = {}
+                for field, val in first_screen.items():
+                    if not val:
+                        still_missing[field] = "valor vazio"
+                        continue
+                    ok = self._set_value_first_available(fallback_ids.get(field, []), val)
+                    self._debug(f"CO01 set {field}='{val}' -> {'OK' if ok else 'FAIL'}")
+                    if not ok:
+                        still_missing[field] = val
+
+                if still_missing:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", f"CO01 primeira tela não preenchida: {still_missing}", ev)
+
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
 

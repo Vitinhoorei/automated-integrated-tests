@@ -84,6 +84,11 @@ def run_excel_tests(
             item.explanation,
             item.parameter,
         )
+        if item.tcode.upper() == "CO01":
+            print(
+                f"[CO01-DEBUG][{item.sheet_name} r{item.row_index}] "
+                f"raw_param='{item.parameter}' | params_resolvidos={smart_params}"
+            )
 
         params = smart_params.copy()
         retry_count = 0
