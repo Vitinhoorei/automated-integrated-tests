@@ -138,6 +138,7 @@ def run_excel_tests(
                         ai.shared_context["Ordem"] = id_gerado
                     
                     print(f"ID Detectado: {id_gerado}")
+                    print(f"[CTX-DEBUG] shared_context atualizado: {ai.shared_context}")
 
                 write_status_with_fix_details(
                     xlsx_path=work_xlsx,

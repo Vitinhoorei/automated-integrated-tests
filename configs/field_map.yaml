@@ -156,6 +156,7 @@ IP42:
 CO01:
   metadata:
     btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+    regex_sucesso: '(?:ordem|order)\s+(\d{6,12})'
   "SAPLCOKO1|0100":
     "Material": "wnd[0]/usr/ctxtRC27M-MATNR"
     "Centro de produção": "wnd[0]/usr/ctxtRC27M-WERKS"
@@ -192,6 +193,7 @@ CO11N:
 CO07:
   metadata:
     btn_salvar: "wnd[0]/tbar[0]/btn[11]"
+    regex_sucesso: '(?:ordem|order)\s+(\d{6,12})'
   "SAPLCOKO1|0100":
     "Centro": "wnd[0]/usr/ctxtCAUFVD-WERKS"
     "Tipo de ordem": "wnd[0]/usr/ctxtCAUFVD-AUART"

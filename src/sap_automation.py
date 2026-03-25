@@ -1064,30 +1064,41 @@ class SapAutomation:
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
             if tcode_u == "CO02":
+                self._debug(f"CO02 iniciando fluxo com explicação='{exp}'")
                 self.apply_parameters_dict("CO02", {"Ordem": self._get_param_value(parameters, "Ordem")})
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO02 ordem aberta via ENTER")
 
                 if "data" in exp:
                     self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-GLTRP"], "")
                     self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-GSTRP"], self._get_param_value(parameters, "Inicio", "Data início"))
+                    self._debug("CO02 datas atualizadas (fim limpo + novo início)")
                     self._safe_press_save(mode=mode)
+                    self._debug("CO02 primeiro salvar executado")
                     self._confirm_popup_option("nao")
+                    self._debug("CO02 popup tratado com opção NÃO")
                     self._safe_press_save(mode=mode)
+                    self._debug("CO02 segundo salvar executado após recálculo")
                     return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
                 if "imprim" in exp or "spool" in exp or "liberar" in exp:
                     self._press_first_available(["wnd[0]/tbar[1]/btn[23]", "wnd[0]/tbar[1]/btn[24]"])
+                    self._debug("CO02 ação liberar ordem executada")
                     self._confirm_popup_option("nao")
+                    self._debug("CO02 popup da liberação tratado com NÃO")
                     self._press_first_available(["wnd[0]/tbar[1]/btn[86]", "wnd[0]/tbar[0]/btn[86]"], sleep_s=1.0)
+                    self._debug("CO02 ação imprimir/spool executada")
                     if self._popup_exists():
                         self._confirm_popup_option("sim")
+                        self._debug("CO02 popup de spool confirmado")
                     return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
                 if "encerr" in exp or "tecnic" in exp:
                     if not self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]/menu[0]", "wnd[0]/mbar/menu[4]/menu[2]/menu[0]"]):
                         self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]", "wnd[0]/mbar/menu[4]/menu[2]"])
                         self._select_first_available(["wnd[0]/mbar/menu[3]/menu[8]/menu[0]", "wnd[0]/mbar/menu[4]/menu[2]/menu[0]"])
+                    self._debug("CO02 encerramento técnico (TECO) executado")
                     return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
@@ -1096,13 +1107,21 @@ class SapAutomation:
                 self.apply_parameters_dict("CO11N", {"Ordem": self._get_param_value(parameters, "Ordem")})
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO11N ordem carregada")
 
                 ops_raw = self._get_param_value(parameters, "Operações", "Operacao", "Operação")
                 ops = [o.strip() for o in re.split(r"[;,|]", ops_raw) if o.strip()] or [self._get_param_value(parameters, "Operação")]
+                for k, v in (parameters or {}).items():
+                    k_norm = self._norm_key(k)
+                    if "operacao" in k_norm and str(v or "").strip():
+                        ops.append(str(v).strip())
+                ops = list(dict.fromkeys(ops))
                 ops = [o for o in ops if o]
+                self._debug(f"CO11N operações detectadas para loop: {ops}")
 
                 if not ops:
                     self._safe_press_save(mode=mode)
+                    self._debug("CO11N sem operações explícitas; salvamento único executado")
                     return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
                 for op in ops:
@@ -1111,6 +1130,7 @@ class SapAutomation:
                     time.sleep(0.7)
                     self._safe_press_save(mode=mode)
                     time.sleep(0.6)
+                    self._debug(f"CO11N operação processada e salva: {op}")
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
             if tcode_u == "CO07":
@@ -1120,6 +1140,7 @@ class SapAutomation:
                 })
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO07 primeira tela preenchida e ENTER executado")
                 self.apply_parameters_dict("CO07", {
                     "Texto breve": self._get_param_value(parameters, "Texto breve"),
                     "Qtd.total": self._get_param_value(parameters, "Qtd.total"),
@@ -1128,15 +1149,19 @@ class SapAutomation:
                 })
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.9)
+                self._debug("CO07 segunda tela preenchida e ENTER executado")
                 self._confirm_popup_option("sim")
+                self._debug("CO07 popup 'Gerar operação' confirmado")
                 try:
                     self.session.findById("wnd[0]").sendVKey(3)
                     time.sleep(0.7)
                 except Exception:
                     pass
                 self._confirm_popup_option("sim")
+                self._debug("CO07 retorno F3 + popup de confirmação tratados")
                 self._select_first_available(["wnd[0]/usr/tabsTABSTRIP/tabpZUOR", "wnd[0]/usr/tabsTS_1100/tabpZUOR"])
                 self._set_value_first_available(["wnd[0]/usr/ctxtCAUFVD-PRCTR"], self._get_param_value(parameters, "Centro de lucro"))
+                self._debug("CO07 aba Atribuição preenchida (Centro de lucro)")
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
             return SapResult("FAIL", "UNSUPPORTED", f"Fluxo PP não suportado para {tcode_u}", "")

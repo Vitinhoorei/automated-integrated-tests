@@ -66,6 +66,7 @@ class AITestIntegrator:
         if tcode_u in ["IW32", "IW41", "CO02", "CO11N"]:
             if "Ordem" not in params and "Ordem" in self.shared_context:
                 params["Ordem"] = self.shared_context["Ordem"]
+                print(f"[CTX-DEBUG] Ordem reutilizada do contexto para {tcode_u}: {params['Ordem']}")
 
         return params
 

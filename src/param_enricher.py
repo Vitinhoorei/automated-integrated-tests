@@ -122,6 +122,6 @@ def enrich_params(tcode: str, explanation: str, raw_param: str) -> dict[str, str
         params.setdefault("Tipo", "Para a frente")
 
     if tcode_u == "CO07":
-        params.setdefault("Tipo", "Data do dia padrão")
+        params.setdefault("Tipo", "Data do dia")
 
     return params
