@@ -59,9 +59,35 @@ def run_excel_tests(
             print(f"[SKIP] Aba '{sname}' ignorada: {e}")
 
     valid_modes = {"executar", "simulado"}
+    pp_chain_blocked = False
 
     for item in rows:
         mode = (item.mode or "").strip().lower()
+        tcode_u = (item.tcode or "").strip().upper()
+        ordem_ctx = str(ai.shared_context.get("Ordem", "") or "").strip()
+        ordem_valida = bool(re.fullmatch(r"\d{6,12}", ordem_ctx))
+
+        if tcode_u == "CO01":
+            pp_chain_blocked = False
+
+        if tcode_u in {"CO02", "CO11N"} and (pp_chain_blocked or not ordem_valida):
+            motivo = "CO01 não concluída com sucesso" if pp_chain_blocked else "número de ordem não disponível/ inválido no contexto"
+            print(
+                f"[{item.sheet_name} r{item.row_index}] {item.tcode} -> SKIP/BLOCKED | {motivo}"
+            )
+            write_status_with_fix_details(
+                xlsx_path=work_xlsx,
+                sheet_name=item.sheet_name,
+                row_index=item.row_index,
+                status="SKIP",
+                source="BLOCKED",
+                message=f"Transação bloqueada por pré-requisito PP: {motivo}",
+                suggested_fix="Executar CO01 com sucesso e capturar ordem válida antes de CO02/CO11N/TECO.",
+                fix_confidence=100,
+                fix_justification=f"Fluxo PP encadeado; dependência obrigatória de ordem. Modo: {mode}",
+                evidence_path="",
+            )
+            continue
 
         if mode not in valid_modes:
             print(
@@ -136,6 +162,8 @@ def run_excel_tests(
                         ai.shared_context["Nota"] = id_gerado
                     elif "ordem" in result.message.lower():
                         ai.shared_context["Ordem"] = id_gerado
+                    elif tcode_u in {"CO01", "CO07"}:
+                        ai.shared_context["Ordem"] = id_gerado
                     
                     print(f"ID Detectado: {id_gerado}")
                     print(f"[CTX-DEBUG] shared_context atualizado: {ai.shared_context}")
@@ -157,6 +185,15 @@ def run_excel_tests(
                     f"[{item.sheet_name} r{item.row_index}] "
                     f"{item.tcode} ({item.mode}) -> {status_print} | {result.message}"
                 )
+
+                if tcode_u == "CO01":
+                    ordem_pos = str(ai.shared_context.get("Ordem", "") or "").strip()
+                    if re.fullmatch(r"\d{6,12}", ordem_pos):
+                        print(f"[PP-DEBUG] CO01 concluída e ordem capturada: {ordem_pos}")
+                        pp_chain_blocked = False
+                    else:
+                        print("[PP-DEBUG] CO01 passou sem número de ordem válido; cadeia PP bloqueada.")
+                        pp_chain_blocked = True
 
                 break
 
@@ -235,6 +272,10 @@ def run_excel_tests(
                 f"{item.tcode} ({mode}) -> FAIL | {causa} | "
                 f"Sugestão: {sugestao} | Confiança: {confianca}"
             )
+
+            if tcode_u == "CO01":
+                pp_chain_blocked = True
+                print("[PP-DEBUG] CO01 falhou; CO02/CO11N subsequentes serão bloqueadas até nova CO01 válida.")
 
             if sap.session:
                 try:

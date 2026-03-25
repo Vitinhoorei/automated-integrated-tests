@@ -874,7 +874,7 @@ class SapAutomation:
             except Exception:
                 continue
 
-        tech_candidates = ["CAUFVD-AUART", "RC27M-AUART"] if "tipo de ordem" in self._norm_key(alias_name) else []
+        tech_candidates = ["CAUFVD-AUART", "RC27M-AUART", "CAUFVD-AUFART", "RC27M-AUFART"] if "tipo de ordem" in self._norm_key(alias_name) else []
         for tech_name in tech_candidates:
             for obj_type in ["GuiCTextField", "GuiTextField", "GuiComboBox"]:
                 try:
@@ -889,6 +889,7 @@ class SapAutomation:
 
         if "tipo de ordem" in self._norm_key(alias_name):
             discovered = self._discover_usr_fields_by_suffix("AUART")
+            discovered += self._discover_usr_fields_by_suffix("AUFART")
             for obj_id, obj_type in discovered:
                 try:
                     obj = self._find(obj_id)
@@ -985,8 +986,12 @@ class SapAutomation:
                     "Tipo de ordem": [
                         "wnd[0]/usr/ctxtCAUFVD-AUART",
                         "wnd[0]/usr/ctxtRC27M-AUART",
+                        "wnd[0]/usr/ctxtCAUFVD-AUFART",
+                        "wnd[0]/usr/ctxtRC27M-AUFART",
                         "wnd[0]/usr/cmbCAUFVD-AUART",
                         "wnd[0]/usr/cmbRC27M-AUART",
+                        "wnd[0]/usr/cmbCAUFVD-AUFART",
+                        "wnd[0]/usr/cmbRC27M-AUFART",
                     ],
                 }
                 still_missing = {}

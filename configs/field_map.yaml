@@ -162,6 +162,7 @@ CO01:
     "Centro de produção": "wnd[0]/usr/ctxtRC27M-WERKS"
     "Tipo de ordem": "wnd[0]/usr/ctxtRC27M-AUART"
     "Tipo de ordem para ordens de produção": "wnd[0]/usr/ctxtRC27M-AUART"
+    "Tipo de ordem para ordens de produção (AUFART)": "wnd[0]/usr/ctxtRC27M-AUFART"
   "SAPLCOKO1|0110":
     "Qtd.total": "wnd[0]/usr/txtCAUFVD-GAMNG"
     "Inicio": "wnd[0]/usr/ctxtCAUFVD-GSTRP"
