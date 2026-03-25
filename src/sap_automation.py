@@ -940,6 +940,16 @@ class SapAutomation:
 
         return found
 
+    def _read_first_available(self, candidates: list[str]) -> tuple[str, str]:
+        for obj_id in candidates:
+            try:
+                obj = self._find(obj_id)
+                val = str(getattr(obj, "text", "") or "").strip()
+                return val, obj_id
+            except Exception:
+                continue
+        return "", ""
+
     def _confirm_popup_option(self, option: str = "nao") -> bool:
         if not self._popup_exists():
             return False
@@ -997,18 +1007,60 @@ class SapAutomation:
                     ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
                     return SapResult("FAIL", "UNMAPPED_PARAM", f"ERRO_MAPEAMENTO_CO01 primeira tela não preenchida: {still_missing}", ev)
 
+                self._debug("CO01 primeira tela preenchida com sucesso")
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO01 ENTER da primeira tela executado")
 
-                self.apply_parameters_dict("CO01", {
-                    "Qtd.total": self._get_param_value(parameters, "Qtd.total", "Quantidade total"),
-                    "Inicio": self._get_param_value(parameters, "Inicio", "Data início"),
-                    "Tipo": self._get_param_value(parameters, "Tipo"),
-                })
+                qtd_candidates = ["wnd[0]/usr/txtCAUFVD-GAMNG", "wnd[0]/usr/txtAFKO-GAMNG"]
+                inicio_candidates = ["wnd[0]/usr/ctxtCAUFVD-GSTRP", "wnd[0]/usr/ctxtAFKO-GSTRP"]
+                tipo_prog_candidates = ["wnd[0]/usr/cmbCAUFVD-TERKZ", "wnd[0]/usr/cmbAFKO-TERKZ"]
+                fim_candidates = ["wnd[0]/usr/ctxtCAUFVD-GLTRP", "wnd[0]/usr/ctxtAFKO-GLTRP"]
+
+                second_screen_detected = False
+                for c in qtd_candidates + inicio_candidates:
+                    try:
+                        self._find(c)
+                        second_screen_detected = True
+                        break
+                    except Exception:
+                        continue
+                if not second_screen_detected:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", "ERRO_MAPEAMENTO_CO01 segunda tela não detectada após ENTER", ev)
+                self._debug(f"CO01 segunda tela detectada: {self._screen_key()}")
+
+                qtd_val = self._get_param_value(parameters, "Qtd.total", "Quantidade total")
+                inicio_val = self._get_param_value(parameters, "Inicio", "Data início")
+                tipo_val = self._get_param_value(parameters, "Tipo")
+
+                ok_qtd, id_qtd, met_qtd = self._set_value_first_available_trace("Qtd.total", qtd_candidates, qtd_val)
+                self._debug(f"CO01 Qtd.total preenchido='{qtd_val}' -> {'OK' if ok_qtd else 'FAIL'} | sap_id='{id_qtd or 'N/A'}' | metodo='{met_qtd or 'N/A'}'")
+                ok_inicio, id_inicio, met_inicio = self._set_value_first_available_trace("Inicio", inicio_candidates, inicio_val)
+                self._debug(f"CO01 Início preenchido='{inicio_val}' -> {'OK' if ok_inicio else 'FAIL'} | sap_id='{id_inicio or 'N/A'}' | metodo='{met_inicio or 'N/A'}'")
+
+                tipo_atual, tipo_id = self._read_first_available(tipo_prog_candidates)
+                self._debug(f"CO01 valor atual do campo Tipo='{tipo_atual}' | sap_id='{tipo_id or 'N/A'}'")
+                if tipo_val:
+                    if self._norm_key(tipo_atual) != self._norm_key(tipo_val):
+                        ok_tipo, id_tipo, met_tipo = self._set_value_first_available_trace("Tipo", tipo_prog_candidates, tipo_val)
+                        self._debug(f"CO01 ajuste do campo Tipo para '{tipo_val}' -> {'OK' if ok_tipo else 'FAIL'} | sap_id='{id_tipo or 'N/A'}' | metodo='{met_tipo or 'N/A'}'")
+                    else:
+                        self._debug("CO01 campo Tipo já estava correto; não sobrescrito")
+
+                if not ok_qtd or not ok_inicio:
+                    ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
+                    return SapResult("FAIL", "UNMAPPED_PARAM", "ERRO_MAPEAMENTO_CO01 falha ao preencher Qtd.total/Inicio na segunda tela", ev)
+
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO01 ENTER de recálculo executado")
+                fim_val, fim_id = self._read_first_available(fim_candidates)
+                self._debug(f"CO01 data final recalculada='{fim_val}' | sap_id='{fim_id or 'N/A'}'")
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
+                self._debug("CO01 ENTER final executado")
+                self._debug("CO01 concluída")
                 return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
             if tcode_u == "CO02":
