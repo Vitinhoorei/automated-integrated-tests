@@ -1235,7 +1235,20 @@ class SapAutomation:
         try:
             self._ensure_session()
             tcode_u = tcode.upper()
-            exec_mode = self._normalize_mode(mode) 
+            exec_mode = self._normalize_mode(mode)
+            
+            if tcode_u.startswith("I") and "Descrição" in parameters and "Texto Breve" not in parameters:
+                parameters["Texto Breve"] = parameters.pop("Descrição")
+
+            try:
+                from param_enricher import enrich_params
+                pm_extras = enrich_params(tcode, explanation, "", shared_context=shared_context)
+                if isinstance(pm_extras, dict):
+                    for k, v in pm_extras.items():
+                        if v and str(v).strip() and k not in parameters:
+                            parameters[k] = v
+            except Exception:
+                pass
             
             if tcode_u in ["CO02", "CO11N"] and "Ordem" not in parameters:
                 if shared_context and "Ordem" in shared_context:
