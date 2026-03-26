@@ -450,26 +450,69 @@ class SapAutomation:
                 def _iw41_debug(msg: str) -> None:
                     print(f"[IW41] {msg}")
 
-                def _first_row_signature() -> str:
-                    candidates = [
-                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-VORNR[0,0]",
-                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,0]",
-                        "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]",
-                    ]
-                    for cand in candidates:
+                def _read_row_field(row_idx: int, candidates: list[str]) -> str:
+                    for candidate in candidates:
+                        row_id = candidate.format(row=row_idx)
                         try:
-                            obj = self.session.findById(cand)
+                            obj = self.session.findById(row_id)
                             txt = (getattr(obj, "Text", "") or "").strip()
                             if txt:
-                                return f"{cand}={txt}"
+                                return txt
                         except Exception:
                             continue
-                    return "row0:no-signature"
+                    return ""
 
-                max_iterations = 100
+                def _build_row_signature(row_idx: int) -> str:
+                    op = _read_row_field(
+                        row_idx,
+                        [
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-VORNR[0,{row}]",
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-VORNR[1,{row}]",
+                        ],
+                    )
+                    subop = _read_row_field(
+                        row_idx,
+                        [
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-UVORN[1,{row}]",
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UVORN[2,{row}]",
+                        ],
+                    )
+                    activity = _read_row_field(
+                        row_idx,
+                        [
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-LTXA1[2,{row}]",
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-LTXA1[4,{row}]",
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-STEUS[5,{row}]",
+                        ],
+                    )
+                    workcenter = _read_row_field(
+                        row_idx,
+                        [
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-ARBPL[3,{row}]",
+                            "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-ARBPL[6,{row}]",
+                        ],
+                    )
+
+                    pieces = [v.strip() for v in [op, subop, activity, workcenter] if (v or "").strip()]
+                    if not pieces:
+                        return ""
+                    return "|".join(pieces)
+
+                def _scan_valid_rows(row_count: int) -> list[tuple[int, str]]:
+                    valid_rows = []
+                    for row_idx in range(row_count):
+                        signature = _build_row_signature(row_idx)
+                        if not signature:
+                            _iw41_debug(f"Linha {row_idx} descartada: sem conteúdo relevante.")
+                            continue
+                        _iw41_debug(f"Linha {row_idx} candidata com assinatura: {signature}")
+                        valid_rows.append((row_idx, signature))
+                    return valid_rows
+
+                max_iterations = 120
                 iteration = 0
-                same_signature_hits = 0
-                last_signature = ""
+                no_progress_rounds = 0
+                processed_signatures: set[str] = set()
 
                 while True:
                     iteration += 1
@@ -478,7 +521,7 @@ class SapAutomation:
                         return SapResult(
                             "FAIL",
                             "EXCEPTION",
-                            f"IW41 interrompido por proteção de loop: {max_iterations} iterações sem finalizar a tabela.",
+                            f"IW41 interrompido por proteção de loop: {max_iterations} varreduras sem finalizar pendências.",
                             ev,
                         )
 
@@ -493,40 +536,42 @@ class SapAutomation:
                         _iw41_debug("Falha ao recapturar tabela IW41. Encerrando fluxo de múltiplas operações.")
                         break
 
-                    _iw41_debug(f"Iteração {iteration}: tabela com {row_count} linha(s).")
+                    _iw41_debug(f"Tabela recarregada. RowCount bruto: {row_count}.")
                     if row_count <= 0:
-                        _iw41_debug("Tabela recarregada sem linhas pendentes. Fluxo concluído.")
+                        _iw41_debug("Tabela sem linhas visíveis. Fluxo concluído.")
                         break
 
-                    signature = _first_row_signature()
-                    _iw41_debug(f"Próxima operação candidata (linha 0): {signature}")
-                    if signature == last_signature:
-                        same_signature_hits += 1
-                    else:
-                        same_signature_hits = 0
-                    last_signature = signature
+                    valid_rows = _scan_valid_rows(row_count)
+                    _iw41_debug(f"Linhas válidas detectadas nesta varredura: {len(valid_rows)}.")
 
-                    if same_signature_hits >= 3:
-                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult(
-                            "FAIL",
-                            "EXCEPTION",
-                            f"IW41 sem progresso: mesma operação reapareceu {same_signature_hits + 1} vezes ({signature}).",
-                            ev,
+                    pending = [(row_idx, sig) for row_idx, sig in valid_rows if sig not in processed_signatures]
+                    if not pending:
+                        no_progress_rounds += 1
+                        _iw41_debug(
+                            f"Sem novas operações válidas pendentes na varredura (tentativa {no_progress_rounds})."
                         )
+                        if no_progress_rounds >= 3:
+                            _iw41_debug("Não há mais operações válidas pendentes. Encerrando fluxo IW41.")
+                            break
+                        time.sleep(0.4)
+                        continue
+
+                    no_progress_rounds = 0
+                    row_idx, signature = pending[0]
+                    _iw41_debug(f"Processando linha {row_idx} com assinatura {signature}.")
 
                     try:
-                        table.getAbsoluteRow(0).selected = True
+                        table.getAbsoluteRow(row_idx).selected = True
                         time.sleep(0.2)
                     except Exception:
-                        _iw41_debug("Não foi possível selecionar a linha 0 da tabela.")
+                        _iw41_debug(f"Não foi possível selecionar a linha {row_idx}.")
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "EXCEPTION", "Não foi possível selecionar a linha 0 da tabela IW41.", ev)
+                        return SapResult("FAIL", "EXCEPTION", f"Não foi possível selecionar a linha {row_idx} da IW41.", ev)
 
                     entrou_linha = False
                     for icon_candidate in [
-                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,0]",
-                        "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]",
+                        f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]",
+                        f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]",
                     ]:
                         try:
                             obj = self.session.findById(icon_candidate)
@@ -538,29 +583,29 @@ class SapAutomation:
                             self.session.findById("wnd[0]").sendVKey(0)
                             time.sleep(0.5)
                             entrou_linha = True
-                            _iw41_debug(f"Entrou na linha 0 usando o campo {icon_candidate}.")
+                            _iw41_debug(f"Entrou na linha {row_idx} usando o campo {icon_candidate}.")
                             break
                         except Exception:
                             continue
 
                     if not entrou_linha:
-                        _iw41_debug("Não foi possível entrar no detalhe da linha 0. Encerrando para evitar inconsistência.")
+                        _iw41_debug(f"Não foi possível entrar no detalhe da linha {row_idx}.")
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "EXCEPTION", "Não foi possível entrar no detalhe da linha 0 na tabela IW41.", ev)
+                        return SapResult("FAIL", "EXCEPTION", f"Não foi possível entrar no detalhe da linha {row_idx} na IW41.", ev)
 
                     abriu_detalhe = False
                     try:
-                        chk_id = "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]"
+                        chk_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]"
                         self.session.findById(chk_id).setFocus()
                         self.session.findById("wnd[0]").sendVKey(2)
                         time.sleep(0.7)
                         abriu_detalhe = True
-                        _iw41_debug("Detalhe da operação aberto com sucesso.")
+                        _iw41_debug(f"Detalhe da operação aberto para assinatura {signature}.")
                     except Exception:
                         pass
 
                     if not abriu_detalhe:
-                        _iw41_debug("Não foi possível abrir detalhe da operação (linha 0).")
+                        _iw41_debug(f"Não foi possível abrir detalhe da operação da linha {row_idx}.")
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
                         return SapResult("FAIL", "EXCEPTION", "Não foi possível abrir o detalhe da operação na IW41.", ev)
 
@@ -588,7 +633,8 @@ class SapAutomation:
                         return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar linha no IW41.", ev)
 
                     processed += 1
-                    _iw41_debug(f"Operações processadas com sucesso até agora: {processed}.")
+                    processed_signatures.add(signature)
+                    _iw41_debug(f"Operação processada com sucesso: {signature}. Total processado: {processed}.")
 
                     voltou = False
                     for _ in range(3):
