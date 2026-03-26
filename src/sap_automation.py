@@ -447,28 +447,86 @@ class SapAutomation:
             processed = 0
 
             if table_id and self._table_exists(table_id):
-                row_idx = 0
+                def _iw41_debug(msg: str) -> None:
+                    print(f"[IW41] {msg}")
 
-                while True:
-                    if not self._table_exists(table_id):
-                        break
+                def _read_grid_cell(row_idx: int, cell_id_patterns: list[str]) -> str:
+                    for pattern in cell_id_patterns:
+                        try:
+                            obj = self.session.findById(pattern.format(row=row_idx))
+                            val = (getattr(obj, "Text", "") or "").strip()
+                            if val:
+                                return val
+                        except Exception:
+                            continue
+                    return ""
 
+                def _row_signature(row_idx: int) -> str:
+                    operation_patterns = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-VORNR[0,{row}]",
+                    ]
+                    suboperation_patterns = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-UVORN[1,{row}]",
+                    ]
+                    description_patterns = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-LTXA1[2,{row}]",
+                    ]
+                    activity_patterns = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-LMNGA[4,{row}]",
+                    ]
+                    work_center_patterns = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/ctxtAFRUD-ARBPL[5,{row}]",
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-ARBPL[5,{row}]",
+                    ]
+
+                    operation = _read_grid_cell(row_idx, operation_patterns)
+                    suboperation = _read_grid_cell(row_idx, suboperation_patterns)
+                    description = _read_grid_cell(row_idx, description_patterns)
+                    activity = _read_grid_cell(row_idx, activity_patterns)
+                    work_center = _read_grid_cell(row_idx, work_center_patterns)
+
+                    if row_idx < 3:
+                        _iw41_debug(
+                            f"Linha {row_idx} leitura campos | "
+                            f"VORNR={operation or '<vazio>'}, UVORN={suboperation or '<vazio>'}, "
+                            f"LTXA1={description or '<vazio>'}, LMNGA={activity or '<vazio>'}, "
+                            f"ARBPL={work_center or '<vazio>'}"
+                        )
+                        _iw41_debug(
+                            f"Linha {row_idx} colunas tentadas: "
+                            f"{operation_patterns + suboperation_patterns + description_patterns + activity_patterns + work_center_patterns}"
+                        )
+
+                    fields = [operation, suboperation, description, activity, work_center]
+                    useful_fields = [f for f in fields if (f or "").strip()]
+                    if not useful_fields:
+                        return ""
+                    return "|".join(useful_fields)
+
+                def _scan_valid_rows(row_count: int, already_processed: set[str]) -> list[tuple[int, str]]:
+                    valid_rows: list[tuple[int, str]] = []
+                    for row_idx in range(row_count):
+                        signature = _row_signature(row_idx)
+                        if not signature:
+                            _iw41_debug(f"Linha {row_idx} descartada: sem conteúdo relevante.")
+                            continue
+                        _iw41_debug(f"Linha {row_idx} candidata com assinatura: {signature}")
+                        if signature in already_processed:
+                            _iw41_debug(f"Linha {row_idx} ignorada: assinatura já processada.")
+                            continue
+                        valid_rows.append((row_idx, signature))
+                    return valid_rows
+
+                def _try_open_row_detail(row_idx: int, reason: str) -> bool:
+                    _iw41_debug(f"Tentando abrir detalhe da linha {row_idx} ({reason}).")
                     try:
                         table = self.session.findById(table_id)
-                        row_count = int(getattr(table, "RowCount", 0))
-                    except Exception:
-                        break
-
-                    if row_count <= 0 or row_idx >= row_count:
-                        break
-
-                    try:
                         table.getAbsoluteRow(row_idx).selected = True
                         time.sleep(0.2)
                     except Exception:
-                        break
+                        _iw41_debug(f"Falha ao selecionar linha {row_idx} para abrir detalhe.")
+                        return False
 
-                    entrou_linha = False
                     for icon_candidate in [
                         f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]",
                         f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]",
@@ -482,28 +540,93 @@ class SapAutomation:
                                 pass
                             self.session.findById("wnd[0]").sendVKey(0)
                             time.sleep(0.5)
-                            entrou_linha = True
-                            break
+                            self.session.findById("wnd[0]").sendVKey(2)
+                            time.sleep(0.7)
+                            _iw41_debug(f"Detalhe aberto via fallback na linha {row_idx} com {icon_candidate}.")
+                            return True
                         except Exception:
                             continue
+                    _iw41_debug(f"Fallback de navegabilidade falhou para linha {row_idx}.")
+                    return False
 
-                    if not entrou_linha:
-                        row_idx += 1
-                        continue
+                processed_signatures: set[str] = set()
+                max_iterations = 200
+                iteration = 0
+                idle_scans = 0
+                saw_positive_rowcount = False
 
-                    abriu_detalhe = False
+                while True:
+                    iteration += 1
+                    if iteration > max_iterations:
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult(
+                            "FAIL",
+                            "EXCEPTION",
+                            f"IW41 interrompido por proteção de loop: {max_iterations} iterações sem finalizar a tabela.",
+                            ev,
+                        )
+
+                    if not self._table_exists(table_id):
+                        _iw41_debug("Tabela não encontrada após retorno. Fluxo considerado concluído.")
+                        break
+
                     try:
-                        chk_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]"
-                        self.session.findById(chk_id).setFocus()
-                        self.session.findById("wnd[0]").sendVKey(2)
-                        time.sleep(0.7)
-                        abriu_detalhe = True
+                        table = self.session.findById(table_id)
+                        row_count = int(getattr(table, "RowCount", 0))
                     except Exception:
-                        pass
+                        _iw41_debug("Falha ao recapturar tabela IW41. Encerrando fluxo de múltiplas operações.")
+                        break
 
-                    if not abriu_detalhe:
-                        row_idx += 1
+                    _iw41_debug(f"Iteração {iteration}: RowCount bruto da grade = {row_count}.")
+                    if row_count <= 0:
+                        _iw41_debug("Tabela recarregada sem linhas pendentes. Fluxo concluído.")
+                        break
+                    saw_positive_rowcount = True
+
+                    valid_rows = _scan_valid_rows(row_count, processed_signatures)
+                    _iw41_debug(f"Linhas válidas pendentes detectadas na varredura: {len(valid_rows)}.")
+                    row_idx = -1
+                    signature = ""
+                    detail_already_open = False
+
+                    if valid_rows:
+                        row_idx, signature = valid_rows[0]
+                        _iw41_debug(f"Próxima operação a processar (conteúdo): linha {row_idx} | assinatura {signature}")
+                    else:
+                        _iw41_debug("Nenhuma assinatura textual válida. Iniciando fallback por navegabilidade.")
+                        for fallback_row in range(row_count):
+                            fallback_signature = f"fallback-row-{fallback_row}"
+                            if fallback_signature in processed_signatures:
+                                continue
+                            if _try_open_row_detail(fallback_row, "fallback-navegabilidade"):
+                                row_idx = fallback_row
+                                signature = fallback_signature
+                                detail_already_open = True
+                                _iw41_debug(f"Linha {fallback_row} validada por fallback operacional.")
+                                break
+
+                    if row_idx < 0:
+                        idle_scans += 1
+                        _iw41_debug("Nenhuma nova linha válida pendente encontrada após varredura.")
+                        if idle_scans >= 2:
+                            if processed == 0 and saw_positive_rowcount:
+                                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                                return SapResult(
+                                    "FAIL",
+                                    "EXCEPTION",
+                                    "IW41 encontrou tabela, mas não conseguiu identificar nenhuma operação válida no grid.",
+                                    ev,
+                                )
+                            _iw41_debug("Sem novas operações válidas após recarga da tabela. Fluxo concluído.")
+                            break
+                        time.sleep(0.3)
                         continue
+                    idle_scans = 0
+
+                    if not detail_already_open and not _try_open_row_detail(row_idx, "processamento-principal"):
+                        _iw41_debug(f"Não foi possível abrir detalhe da operação (linha {row_idx}).")
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult("FAIL", "EXCEPTION", "Não foi possível abrir o detalhe da operação na IW41.", ev)
 
                     self._set_checkbox_if_exists(conf_final_id, False)
                     self._set_checkbox_if_exists(baixa_res_id, False)
@@ -523,11 +646,14 @@ class SapAutomation:
 
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text()
+                    _iw41_debug(f"Resultado do save: tipo='{sb_type}' texto='{sb}'.")
                     if is_real_mode and sb_type in {"E", "A", "X"}:
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao gravar linha {row_idx + 1} no IW41.", ev)
+                        return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar linha no IW41.", ev)
 
                     processed += 1
+                    processed_signatures.add(signature)
+                    _iw41_debug(f"Operações processadas com sucesso até agora: {processed}.")
 
                     voltou = False
                     for _ in range(3):
@@ -552,12 +678,20 @@ class SapAutomation:
                             break
 
                     if not voltou and not self._table_exists(table_id):
+                        _iw41_debug("Tabela não reapareceu após salvar/voltar. Fluxo concluído com sucesso.")
                         break
-
-                    row_idx += 1
+                    _iw41_debug("Tabela recarregada após save/volta. Nova varredura será executada.")
 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
+                if processed == 0 and saw_positive_rowcount:
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult(
+                        "FAIL",
+                        "EXCEPTION",
+                        "IW41 encontrou tabela, mas não conseguiu identificar nenhuma operação válida no grid.",
+                        ev,
+                    )
                 return SapResult("PASS", "OK", f"IW41 executado com sucesso em {processed} linha(s). ({modo_txt})", ev)
 
             self._set_checkbox_if_exists(conf_final_id, False)
