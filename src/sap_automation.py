@@ -439,11 +439,15 @@ class SapAutomation:
             self.session.findById("wnd[0]").sendVKey(0)
             time.sleep(0.8)
 
-            ontem = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
-            hora_inicio_dt = datetime.strptime("16:00", "%H:%M")
-            hora_fim_dt = hora_inicio_dt + timedelta(hours=2)
-            hora_inicio = hora_inicio_dt.strftime("%H:%M")
-            hora_fim = hora_fim_dt.strftime("%H:%M")
+            agora = datetime.now()
+            momento_inicio = agora - timedelta(hours=2) 
+            data_inicio = momento_inicio.strftime("%d.%m.%Y")
+            hora_inicio = momento_inicio.strftime("%H:%M")
+            data_fim = agora.strftime("%d.%m.%Y")
+            hora_fim = agora.strftime("%H:%M")
+            
+            print(f"Lançamento -> Início: {data_inicio} {hora_inicio} | Fim: {data_fim} {hora_fim}")
+            
             processed = 0
 
             if table_id and self._table_exists(table_id):
@@ -511,9 +515,9 @@ class SapAutomation:
                     if pernr and pernr_id:
                         self._set_text_if_exists(pernr_id, pernr)
 
-                    self._set_text_if_exists(isdd_id, ontem)
-                    self._set_text_if_exists(isdz_id, hora_inicio)
-                    self._set_text_if_exists(iedd_id, ontem)
+                    self._set_text_if_exists(isdd_id, data_inicio) 
+                    self._set_text_if_exists(isdz_id, hora_inicio) 
+                    self._set_text_if_exists(iedd_id, data_fim)    
                     self._set_text_if_exists(iedz_id, hora_fim)
 
                     self.session.findById("wnd[0]").sendVKey(0)
@@ -566,9 +570,9 @@ class SapAutomation:
             if pernr and pernr_id:
                 self._set_text_if_exists(pernr_id, pernr)
 
-            self._set_text_if_exists(isdd_id, ontem)
-            self._set_text_if_exists(isdz_id, hora_inicio)
-            self._set_text_if_exists(iedd_id, ontem)
+            self._set_text_if_exists(isdd_id, data_inicio) 
+            self._set_text_if_exists(isdz_id, hora_inicio) 
+            self._set_text_if_exists(iedd_id, data_fim)    
             self._set_text_if_exists(iedz_id, hora_fim)
 
             self.session.findById("wnd[0]").sendVKey(0)
