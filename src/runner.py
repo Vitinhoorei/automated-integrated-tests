@@ -18,14 +18,22 @@ from sap_automation import SapAutomation
 from sap_screen_dump import dump_screen
 
 
-def _copy_to_output(original_path: str, output_dir: str) -> str:
+def _copy_to_output(original_path: str, output_dir: str, sheet_name: str) -> str:
     ensure_dir(output_dir)
     src = Path(original_path)
-    name = f"Resultados de Automação - PM-Manutenção{src.suffix}"
+    texto_busca = f"{src.name} {sheet_name}".upper()
+    
+    if "PP" in texto_busca:
+        modulo_nome = "PP"
+    elif "PM" in texto_busca:
+        modulo_nome = "PM"
+    else:
+        modulo_nome = "Geral" 
+
+    name = f"Resultados de Automação - {modulo_nome}{src.suffix}"
     dst = Path(output_dir) / name
     shutil.copy2(src, dst)
     return str(dst)
-
 
 def run_excel_tests(
     xlsx_path: str,
@@ -39,7 +47,7 @@ def run_excel_tests(
     exec_id = uuid.uuid4().hex[:10]
     sap = SapAutomation(field_map_path="configs/field_map.yaml")
     ai = AITestIntegrator()
-    work_xlsx = _copy_to_output(xlsx_path, cfg.output_dir) if make_copy else xlsx_path
+    work_xlsx = _copy_to_output(xlsx_path, cfg.output_dir, sheet_name) if make_copy else xlsx_path
     raw_sheet = (sheet_name or "").strip()
 
     if not raw_sheet or raw_sheet.upper() == "ALL":
@@ -97,6 +105,7 @@ def run_excel_tests(
                 item.explanation,
                 evidence_path=evidence_path,
                 mode=mode,
+                shared_context=ai.shared_context
             )
             
             if result.status != "PASS":
