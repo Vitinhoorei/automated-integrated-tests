@@ -63,7 +63,7 @@ def enrich_params(tcode: str, explanation: str, raw_param: str, shared_context: 
         "qtd total": "Quantidade", 
         "quantidade total": "Quantidade", 
         "quantidade": "Quantidade",
-        "tipo de programacao": "Tipo de programação", 
+        "tipo de programação": "Tipo de programação", 
         "texto breve": "Descrição", 
         "unidade de medida": "Unidade de medida",
         "data base inicio": "Data início", 

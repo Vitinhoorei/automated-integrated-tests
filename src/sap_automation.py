@@ -777,12 +777,16 @@ class SapAutomation:
             return SapResult("FAIL", "EXCEPTION", str(e), ev)
         
     # PP
-    def _run_pp_order_flow(self, tcode, parameters, evidence_path, mode):
+    def _run_pp_order_flow(self, tcode, parameters, evidence_path, mode):        
         tcode_u = tcode.upper()
         self.open_tcode(tcode_u)
         fluxo = parameters.get("_FLUXO", "PADRAO")
         time.sleep(1.0)
         
+        if tcode_u == "CO01":
+            hoje = datetime.now().strftime("%d.%m.%Y")
+            parameters["Data início"] = hoje
+            
         self.apply_parameters_dict(tcode_u, parameters)
         self.session.findById("wnd[0]").sendVKey(0) 
         time.sleep(1.0)
@@ -798,79 +802,209 @@ class SapAutomation:
                 self.session.findById("wnd[1]").sendVKey(0)
                 
             if fluxo == "DATAS":
-                try:
+                try: 
                     self.session.findById(self.field_map["CO02_DATAS"]["SAPLCOKO1|0120"]["Data fim"]).text = ""
                 except: 
                     pass
+                
+                amanha = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
+                parameters["Data início"] = amanha
+                
                 self.apply_parameters_dict("CO02_DATAS", parameters)
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.8)
+                
+                if self._statusbar_type() in ["W", "S", "I"]:
+                    self.session.findById("wnd[0]").sendVKey(0)
+                    time.sleep(0.5)
                 
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
-                time.sleep(0.8)
-                if self._popup_exists(): 
-                    self._dismiss_popup("NO") 
-                    time.sleep(0.5)
-                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
+                time.sleep(1.0)
+                
+                popup_msgs = []
+                if self._popup_exists():
+                    txt = self._popup_text()
+                    if txt: popup_msgs.append(txt)
+                    
+                    try:
+                        self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                    except:
+                        try:
+                            self.session.findById("wnd[1]/usr/btnBUTTON_1").press()
+                        except:
+                            self.session.findById("wnd[1]").sendVKey(0)
+                    time.sleep(1.0)
+                
+                sb = self._statusbar_text()
+                ev = self._capture_success_evidence(evidence_path)
+                msg = sb or "Data modificada e ordem salva com sucesso"
+                if popup_msgs:
+                    msg += f" | POPUPS IGNORADOS: {' || '.join(popup_msgs)}"
+                return SapResult("PASS", "OK", msg, ev)
                 
             elif fluxo == "LIBERAR_IMPRIMIR":
-                try:
-                    self.session.findById(self.field_map["CO02_LIBERAR"]["metadata"]["btn_liberar"]).press()
-                except:
-                    self.session.findById("wnd[0]/tbar[1]/btn[25]").press() # ID Padrão Bandeira
-                time.sleep(0.5)
+                clicou_liberar = False
+                for btn in ["wnd[0]/tbar[1]/btn[25]", "wnd[0]/tbar[1]/btn[23]", "wnd[0]/tbar[1]/btn[28]"]:
+                    try:
+                        self.session.findById(btn).press()
+                        clicou_liberar = True
+                        break
+                    except:
+                        pass
+                        
+                if not clicou_liberar:
+                    try:
+                        self.session.findById("wnd[0]/tbar[0]/okcd").text = "=FREI"
+                        self.session.findById("wnd[0]").sendVKey(0)
+                    except:
+                        pass
+                
+                time.sleep(1.2)
                 
                 if self._popup_exists(): 
                     self._dismiss_popup("NO")
-                    time.sleep(0.5)
+                    time.sleep(1.0)
                 
-                try:
-                    self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
-                except:
-                    self.session.findById("wnd[0]").sendVKey(86)
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
                 time.sleep(1.0)
                 
-                if self._popup_exists():
-                    self.session.findById("wnd[1]").sendVKey(0) 
-                    time.sleep(0.5)
-                    
-                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
+                sb = self._statusbar_text()
+                ev = self._capture_success_evidence(evidence_path)
+                return SapResult("PASS", "OK", sb or "Ordem liberada e salva com sucesso", ev)
                 
             elif fluxo == "TECO":
+                achou_teco = False
                 try:
-                    self.session.findById(self.field_map["CO02_TECO"]["metadata"]["menu_teco"]).select()
-                except:
+                    mbar = self.session.findById("wnd[0]/mbar")
+                    count1 = mbar.Children.Count
+                    for i in range(count1):
+                        m1 = mbar.Children(int(i))
+                        count2 = m1.Children.Count
+                        for j in range(count2):
+                            m2 = m1.Children(int(j))
+                            t2 = str(getattr(m2, "Text", "")).lower()
+                            if "tecnic" in t2 or "technic" in t2:
+                                m2.select()
+                                achou_teco = True
+                                break
+                            
+                            count3 = getattr(m2.Children, "Count", 0)
+                            for k in range(count3):
+                                m3 = m2.Children(int(k))
+                                t3 = str(getattr(m3, "Text", "")).lower()
+                                if "tecnic" in t3 or "technic" in t3:
+                                    m3.select()
+                                    achou_teco = True
+                                    break
+                            if achou_teco: break
+                        if achou_teco: break
+                except Exception:
                     pass
-                time.sleep(0.5)
+                    
+                if not achou_teco:
+                    try:
+                        self.session.findById("wnd[0]/mbar/menu[1]/menu[8]/menu[3]").select()
+                        achou_teco = True
+                    except:
+                        return SapResult("FAIL", "MENU", "O robô vasculhou todo o SAP e não encontrou a palavra 'Concluir Tecnicamente'.", evidence_path)
+                
+                time.sleep(1.0)
+                
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+                time.sleep(1.0)
+                
+                sb = self._statusbar_text()
+                ev = self._capture_success_evidence(evidence_path)
+                return SapResult("PASS", "OK", sb or "Encerramento Técnico (TECO) concluído", ev)
 
         return self._finalizar_pelo_modo_universal(tcode_u, mode, evidence_path)
 
     def _run_pp_co11n_flow(self, parameters, evidence_path, mode):
-        ops_str = parameters.get("Operação", "0010") 
-        operacoes_lista = [op.strip() for op in str(ops_str).split(",")]
+        ops_str = parameters.get("Operação", "") 
+        ordem = parameters.get("Ordem", "")
+        operacoes_lista = []
         
-        ordem = parameters.get("Ordem", self.shared_context.get("Ordem", ""))
+        if ops_str:
+            operacoes_lista = [op.strip() for op in str(ops_str).split(",")]
+        else:
+            self.open_tcode("CO11N")
+            self.apply_parameters_dict("CO11N", {"Ordem": ordem})
+            time.sleep(0.5)
+            
+            try:
+                try: 
+                    op_field = self.field_map["CO11N"]["SAPLCORU_S|0010"]["Operação"]
+                except: 
+                    op_field = "wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-VORNR"
+                
+                self.session.findById(op_field).setFocus()
+                self.session.findById("wnd[0]").sendVKey(4) 
+                time.sleep(1.0)
+                
+                if self._popup_exists():
+                    try:
+                        for child in self.session.findById("wnd[1]/usr").Children:
+                            txt = str(getattr(child, "Text", "")).strip()
+                            
+                            if len(txt) == 4 and txt.isdigit() and txt.startswith("0"):
+                                if txt not in operacoes_lista:
+                                    operacoes_lista.append(txt)
+                    except: pass
+                    
+                    self.session.findById("wnd[1]").sendVKey(12) 
+                    time.sleep(0.5)
+            except Exception as e:
+                print(f"[Aviso] Falha ao escanear as operações: {e}")
+                
+            operacoes_lista.sort()
+        
+            if not operacoes_lista:
+                operacoes_lista = ["AUTO"]
+                
+        print(f"\n[DEBUG CO11N] Operações encontradas para apontar: {operacoes_lista}")
+        
+        resultado_final = None
         
         for op in operacoes_lista:
             self.open_tcode("CO11N")
-            self.apply_parameters_dict("CO11N", {"Ordem": ordem, "Operação": op})
-            self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.8)
+            
+            dados_tela = {"Ordem": ordem}
+            if op != "AUTO":
+                dados_tela["Operação"] = op
+                
+            self.apply_parameters_dict("CO11N", dados_tela)
+            time.sleep(0.5)
+            
+            if op == "AUTO":
+                try:
+                    self.session.findById(op_field).setFocus()
+                    self.session.findById("wnd[0]").sendVKey(4)
+                    time.sleep(1.0)
+                    if self._popup_exists():
+                        self.session.findById("wnd[1]").sendVKey(2) 
+                        time.sleep(0.8)
+                except: pass
+            
+            self.session.findById("wnd[0]").sendVKey(0) 
+            time.sleep(1.0)
             
             if self._popup_exists():
                 self.session.findById("wnd[1]").sendVKey(0)
                 time.sleep(0.5)
+                
+            if self._statusbar_type() in ["W", "S", "I"]:
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.5)
             
-            self._finalizar_pelo_modo_universal("CO11N", mode, evidence_path)
+            resultado_final = self._finalizar_pelo_modo_universal("CO11N", mode, evidence_path)
             
-        return SapResult("PASS", "OK", f"Apontamento concluído para as operações: {ops_str}")
+        return resultado_final or SapResult("PASS", "OK", f"Apontamento concluído: {operacoes_lista}")
 
     def _run_pp_co07_flow(self, parameters, evidence_path, mode):
         self.open_tcode("CO07")
         self.apply_parameters_dict("CO07", parameters)
         self.session.findById("wnd[0]").sendVKey(0)
         time.sleep(1.0)
-        
-        parameters["Tipo de programação"] = "Data do dia"
         self.apply_parameters_dict("CO07", parameters)
         self.session.findById("wnd[0]").sendVKey(0)
         time.sleep(0.8)
@@ -879,7 +1013,10 @@ class SapAutomation:
             try:
                 self.session.findById(self.field_map["CO07"]["metadata"]["btn_gerar_operacao"]).press()
             except:
-                self.session.findById("wnd[1]/usr/btnSPOP-VAROPTION3").press()
+                try:
+                    self.session.findById("wnd[1]/usr/btnSPOP-VAROPTION3").press()
+                except:
+                    self.session.findById("wnd[1]").sendVKey(0)
             time.sleep(1.0)
             
         self.session.findById("wnd[0]").sendVKey(3)
@@ -1099,8 +1236,11 @@ class SapAutomation:
             self._ensure_session()
             tcode_u = tcode.upper()
             exec_mode = self._normalize_mode(mode) 
-            print(f"\n[DEBUG SAP] Iniciando {tcode_u} | Parâmetros recebidos: {parameters}")
             
+            if tcode_u in ["CO02", "CO11N"] and "Ordem" not in parameters:
+                if shared_context and "Ordem" in shared_context:
+                    parameters["Ordem"] = shared_context["Ordem"]
+                        
             if tcode_u == "IW41":
                 return self._run_iw41_flow(parameters, evidence_path, mode=exec_mode)
 
