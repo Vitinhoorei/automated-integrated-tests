@@ -447,31 +447,86 @@ class SapAutomation:
             processed = 0
 
             if table_id and self._table_exists(table_id):
-                row_idx = 0
+                def _iw41_debug(msg: str) -> None:
+                    print(f"[IW41] {msg}")
+
+                def _first_row_signature() -> str:
+                    candidates = [
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtAFRUD-VORNR[0,0]",
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,0]",
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]",
+                    ]
+                    for cand in candidates:
+                        try:
+                            obj = self.session.findById(cand)
+                            txt = (getattr(obj, "Text", "") or "").strip()
+                            if txt:
+                                return f"{cand}={txt}"
+                        except Exception:
+                            continue
+                    return "row0:no-signature"
+
+                max_iterations = 100
+                iteration = 0
+                same_signature_hits = 0
+                last_signature = ""
 
                 while True:
+                    iteration += 1
+                    if iteration > max_iterations:
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult(
+                            "FAIL",
+                            "EXCEPTION",
+                            f"IW41 interrompido por proteção de loop: {max_iterations} iterações sem finalizar a tabela.",
+                            ev,
+                        )
+
                     if not self._table_exists(table_id):
+                        _iw41_debug("Tabela não encontrada após retorno. Fluxo considerado concluído.")
                         break
 
                     try:
                         table = self.session.findById(table_id)
                         row_count = int(getattr(table, "RowCount", 0))
                     except Exception:
+                        _iw41_debug("Falha ao recapturar tabela IW41. Encerrando fluxo de múltiplas operações.")
                         break
 
-                    if row_count <= 0 or row_idx >= row_count:
+                    _iw41_debug(f"Iteração {iteration}: tabela com {row_count} linha(s).")
+                    if row_count <= 0:
+                        _iw41_debug("Tabela recarregada sem linhas pendentes. Fluxo concluído.")
                         break
+
+                    signature = _first_row_signature()
+                    _iw41_debug(f"Próxima operação candidata (linha 0): {signature}")
+                    if signature == last_signature:
+                        same_signature_hits += 1
+                    else:
+                        same_signature_hits = 0
+                    last_signature = signature
+
+                    if same_signature_hits >= 3:
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult(
+                            "FAIL",
+                            "EXCEPTION",
+                            f"IW41 sem progresso: mesma operação reapareceu {same_signature_hits + 1} vezes ({signature}).",
+                            ev,
+                        )
 
                     try:
-                        table.getAbsoluteRow(row_idx).selected = True
+                        table.getAbsoluteRow(0).selected = True
                         time.sleep(0.2)
                     except Exception:
-                        break
+                        _iw41_debug("Não foi possível selecionar a linha 0 da tabela.")
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult("FAIL", "EXCEPTION", "Não foi possível selecionar a linha 0 da tabela IW41.", ev)
 
                     entrou_linha = False
                     for icon_candidate in [
-                        f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]",
-                        f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]",
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,0]",
+                        "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]",
                     ]:
                         try:
                             obj = self.session.findById(icon_candidate)
@@ -483,27 +538,31 @@ class SapAutomation:
                             self.session.findById("wnd[0]").sendVKey(0)
                             time.sleep(0.5)
                             entrou_linha = True
+                            _iw41_debug(f"Entrou na linha 0 usando o campo {icon_candidate}.")
                             break
                         except Exception:
                             continue
 
                     if not entrou_linha:
-                        row_idx += 1
-                        continue
+                        _iw41_debug("Não foi possível entrar no detalhe da linha 0. Encerrando para evitar inconsistência.")
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult("FAIL", "EXCEPTION", "Não foi possível entrar no detalhe da linha 0 na tabela IW41.", ev)
 
                     abriu_detalhe = False
                     try:
-                        chk_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]"
+                        chk_id = "wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,0]"
                         self.session.findById(chk_id).setFocus()
                         self.session.findById("wnd[0]").sendVKey(2)
                         time.sleep(0.7)
                         abriu_detalhe = True
+                        _iw41_debug("Detalhe da operação aberto com sucesso.")
                     except Exception:
                         pass
 
                     if not abriu_detalhe:
-                        row_idx += 1
-                        continue
+                        _iw41_debug("Não foi possível abrir detalhe da operação (linha 0).")
+                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                        return SapResult("FAIL", "EXCEPTION", "Não foi possível abrir o detalhe da operação na IW41.", ev)
 
                     self._set_checkbox_if_exists(conf_final_id, False)
                     self._set_checkbox_if_exists(baixa_res_id, False)
@@ -523,11 +582,13 @@ class SapAutomation:
 
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text()
+                    _iw41_debug(f"Resultado do save: tipo='{sb_type}' texto='{sb}'.")
                     if is_real_mode and sb_type in {"E", "A", "X"}:
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao gravar linha {row_idx + 1} no IW41.", ev)
+                        return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar linha no IW41.", ev)
 
                     processed += 1
+                    _iw41_debug(f"Operações processadas com sucesso até agora: {processed}.")
 
                     voltou = False
                     for _ in range(3):
@@ -552,9 +613,8 @@ class SapAutomation:
                             break
 
                     if not voltou and not self._table_exists(table_id):
+                        _iw41_debug("Tabela não reapareceu após salvar/voltar. Fluxo concluído com sucesso.")
                         break
-
-                    row_idx += 1
 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
