@@ -43,24 +43,118 @@ class SapAutomation:
         except FileNotFoundError:
             return {}
         
-    def go_to_initial_screen(self) -> None:
-        """Força a volta para a tela inicial limpando inclusive popups de saída."""
+    def _is_easy_access(self) -> bool:
         self._ensure_session()
         try:
-            for _ in range(3):
+            tx = str(self.session.Info.Transaction).strip().upper()
+            if tx == "SESSION_MANAGER":
+                return True
+        except Exception:
+            pass
+
+        try:
+            title = str(self.session.findById("wnd[0]").Text).strip().upper()
+            if "SAP EASY ACCESS" in title:
+                return True
+        except Exception:
+            pass
+
+        return False
+
+
+    def _close_secondary_windows(self) -> None:
+        self._ensure_session()
+        try:
+            count = int(self.session.Children.Count)
+        except Exception:
+            return
+
+        for idx in range(count - 1, 0, -1):
+            try:
+                self.session.findById(f"wnd[{idx}]").close()
+                time.sleep(0.3)
+            except Exception:
+                try:
+                    self.session.findById(f"wnd[{idx}]").sendVKey(12)
+                    time.sleep(0.3)
+                except Exception:
+                    pass
+
+
+    def _press_easy_access_button(self) -> bool:
+        self._ensure_session()
+
+        try:
+            root = self.session.findById("wnd[0]/usr")
+        except Exception:
+            return False
+
+        stack = [root]
+        targets = ("EXECUTAR SAP EASY ACCESS", "SAP EASY ACCESS")
+
+        while stack:
+            node = stack.pop()
+            try:
+                txt = str(getattr(node, "Text", "")).strip().upper()
+                typ = str(getattr(node, "Type", "")).strip().upper()
+
+                if ("BTN" in typ or "BUTTON" in typ) and any(t in txt for t in targets):
+                    node.press()
+                    time.sleep(1.0)
+                    return True
+            except Exception:
+                pass
+
+            try:
+                for i in range(node.Children.Count - 1, -1, -1):
+                    stack.append(node.Children(i))
+            except Exception:
+                pass
+
+        return False
+
+
+    def go_to_initial_screen(self) -> None:
+        self._ensure_session()
+        last_error = None
+
+        for tentativa in range(5):
+            try:
+                self._close_secondary_windows()
+
                 while self._popup_exists():
                     self._dismiss_popup()
                     time.sleep(0.3)
-                
+
+                if self._is_easy_access():
+                    return
+
                 self.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
                 self.session.findById("wnd[0]").sendVKey(0)
-                time.sleep(0.5)
-                
-                if not self._popup_exists():
-                    break
-                
-        except Exception:
-            pass
+                time.sleep(1.0)
+
+                while self._popup_exists():
+                    self._dismiss_popup()
+                    time.sleep(0.3)
+
+                if self._is_easy_access():
+                    return
+
+                if self._press_easy_access_button() and self._is_easy_access():
+                    return
+
+                try:
+                    title = self.session.findById("wnd[0]").Text
+                except Exception:
+                    title = "desconhecida"
+
+                print(f"[go_to_initial_screen] tentativa={tentativa+1} | tela_atual={title}")
+
+            except Exception as e:
+                last_error = e
+                print(f"[go_to_initial_screen] erro na tentativa {tentativa+1}: {e}")
+
+        raise RuntimeError(f"Não foi possível garantir SAP Easy Access. Último erro: {last_error}")
 
     @staticmethod
     def _norm_key(text: str) -> str:
@@ -1155,11 +1249,18 @@ class SapAutomation:
 
     def open_tcode(self, tcode: str) -> None:
         self._ensure_session()
+        self.go_to_initial_screen()
+
         if self._popup_exists():
             self._dismiss_popup()
-        self.session.findById("wnd[0]/tbar[0]/okcd").text = f"/n{tcode.upper()}"
+
+        self.session.findById("wnd[0]/tbar[0]/okcd").text = tcode.upper()
         self.session.findById("wnd[0]").sendVKey(0)
-        time.sleep(0.6)
+        time.sleep(1.0)
+
+        sb_type = self._statusbar_type()
+        if sb_type in {"E", "A", "X"}:
+            raise RuntimeError(self._statusbar_text() or f"Falha ao abrir a transação {tcode.upper()}.")
 
     def execute_default(self) -> None:
         self.session.findById("wnd[0]").sendVKey(0)
