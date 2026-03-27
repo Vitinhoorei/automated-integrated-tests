@@ -230,10 +230,9 @@ def run_excel_tests(
 
             if sap.session:
                 try:
-                    sap.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
-                    sap.session.findById("wnd[0]").sendVKey(0)
-                except Exception:
-                    pass
+                    sap.go_to_initial_screen()
+                except Exception as e:
+                    print(f"[runner] falha ao voltar para tela inicial: {e}")
             break
 
     for sname in processed_sheets:
