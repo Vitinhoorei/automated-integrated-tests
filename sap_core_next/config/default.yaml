@@ -1,0 +1,10 @@
+ai:
+  enabled: true
+retry:
+  max_attempts: 3
+  min_confidence: 70
+  retry_on_sources: ["STATUSBAR", "EXCEPTION", "BUSINESS"]
+evidence:
+  base_dir: "data/evidence_next"
+sap:
+  use_legacy_bridge: true
