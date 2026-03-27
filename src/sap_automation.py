@@ -398,39 +398,21 @@ class SapAutomation:
             return False
 
     def _run_iw41_flow(self, parameters: dict, evidence_path: str = "", mode: str = "real") -> SapResult:
-        """
-        Fluxo especial IW41:
-        - entra na transação
-        - Enter / Enter
-        - se houver tabela com uma ou mais linhas, processa todas
-        - se entrar direto no detalhe, processa uma vez
+        """Fluxo IW41 (Multi-Linhas e Linha Única):
+        - Entra na ordem.
+        - Se o SAP pular a tabela (1 operação), preenche direto e salva.
+        - Se o SAP mostrar a tabela (várias), faz o loop de duplo clique.
         """
         try:
             is_real_mode = self._is_real_mode(mode)
-
+            
             mapping = self.field_map.get("IW41", {}).get("SAPLCORU|0100", {})
             mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
 
             ordem_id = mapping.get("Ordem") or mapping_norm.get(self._norm_key("Ordem"))
-            pernr_id = mapping.get("Nº pessoal") or mapping_norm.get(self._norm_key("Nº pessoal"))
-            conf_final_id = mapping.get("Conf.final") or mapping_norm.get(self._norm_key("Conf.final"))
-            baixa_res_id = mapping.get("Dar baixa res.") or mapping_norm.get(self._norm_key("Dar baixa res."))
-            isdd_id = mapping.get("Início trabalho data") or mapping_norm.get(self._norm_key("Início trabalho data"))
-            isdz_id = mapping.get("Início trabalho hora") or mapping_norm.get(self._norm_key("Início trabalho hora"))
-            iedd_id = mapping.get("Fim trabalho data") or mapping_norm.get(self._norm_key("Fim trabalho data"))
-            iedz_id = mapping.get("Fim trabalho hora") or mapping_norm.get(self._norm_key("Fim trabalho hora"))
-            table_id = mapping.get("Tabela confirmações") or mapping_norm.get(self._norm_key("Tabela confirmações"))
-
+            
             ordem = self._get_param_value(parameters, "Ordem")
             pernr = self._get_param_value(parameters, "Nº pessoal", "N* pessoal", "N pessoal", "Numero pessoal")
-
-            if ordem and ordem_id:
-                self._set_text_if_exists(ordem_id, ordem)
-
-            self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.8)
-            self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.8)
 
             agora = datetime.now()
             momento_inicio = agora - timedelta(hours=2) 
@@ -438,150 +420,127 @@ class SapAutomation:
             hora_inicio = momento_inicio.strftime("%H:%M")
             data_fim = agora.strftime("%d.%m.%Y")
             hora_fim = agora.strftime("%H:%M")
+
+            self.open_tcode("IW41")
+            if ordem and ordem_id:
+                self._set_text_if_exists(ordem_id, ordem)
+            self.session.findById("wnd[0]").sendVKey(0) 
+            time.sleep(1.0)
             
-            print(f"Lançamento -> Início: {data_inicio} {hora_inicio} | Fim: {data_fim} {hora_fim}")
+            if self._popup_exists():
+                self.session.findById("wnd[1]").sendVKey(0)
+                time.sleep(0.5)
+
+            table_id = "wnd[0]/usr/tblSAPLCORUTC_3100"
             
-            processed = 0
-
-            if table_id and self._table_exists(table_id):
-                row_idx = 0
-
-                while True:
-                    if not self._table_exists(table_id):
-                        break
-
-                    try:
-                        table = self.session.findById(table_id)
-                        row_count = int(getattr(table, "RowCount", 0))
-                    except Exception:
-                        break
-
-                    if row_count <= 0 or row_idx >= row_count:
-                        break
-
-                    try:
-                        table.getAbsoluteRow(row_idx).selected = True
-                        time.sleep(0.2)
-                    except Exception:
-                        break
-
-                    entrou_linha = False
-                    for icon_candidate in [
-                        f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{row_idx}]",
-                        f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]",
-                    ]:
-                        try:
-                            obj = self.session.findById(icon_candidate)
-                            obj.setFocus()
-                            try:
-                                obj.caretPosition = 0
-                            except Exception:
-                                pass
-                            self.session.findById("wnd[0]").sendVKey(0)
-                            time.sleep(0.5)
-                            entrou_linha = True
-                            break
-                        except Exception:
-                            continue
-
-                    if not entrou_linha:
-                        row_idx += 1
-                        continue
-
-                    abriu_detalhe = False
-                    try:
-                        chk_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/chkCORUF-FLG_SPL[3,{row_idx}]"
-                        self.session.findById(chk_id).setFocus()
-                        self.session.findById("wnd[0]").sendVKey(2)
-                        time.sleep(0.7)
-                        abriu_detalhe = True
-                    except Exception:
-                        pass
-
-                    if not abriu_detalhe:
-                        row_idx += 1
-                        continue
-
+            if not self._table_exists(table_id):
+                try:
+                    self.session.findById("wnd[0]/usr/ctxtAFRUD-PERNR") 
+                    self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-PERNR", pernr)
+                    self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-ISDD", data_inicio)
+                    self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-ISDZ", hora_inicio)
+                    self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-IEDD", data_fim)
+                    self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-IEDZ", hora_fim)
+                    
+                    conf_final_id = mapping.get("Conf.final") or mapping_norm.get(self._norm_key("Conf.final"))
+                    baixa_res_id = mapping.get("Dar baixa res.") or mapping_norm.get(self._norm_key("Dar baixa res."))
                     self._set_checkbox_if_exists(conf_final_id, False)
                     self._set_checkbox_if_exists(baixa_res_id, False)
 
-                    if pernr and pernr_id:
-                        self._set_text_if_exists(pernr_id, pernr)
+                    self.session.findById("wnd[0]").sendVKey(0) 
+                    time.sleep(0.5)
 
-                    self._set_text_if_exists(isdd_id, data_inicio) 
-                    self._set_text_if_exists(isdz_id, hora_inicio) 
-                    self._set_text_if_exists(iedd_id, data_fim)    
-                    self._set_text_if_exists(iedz_id, hora_fim)
-
-                    self.session.findById("wnd[0]").sendVKey(0)
-                    time.sleep(0.7)
+                    if self._popup_exists():
+                        self.session.findById("wnd[1]").sendVKey(0)
+                        time.sleep(0.5)
 
                     self._safe_press_save(mode=mode)
-
+                    
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text()
+                    
                     if is_real_mode and sb_type in {"E", "A", "X"}:
                         ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP ao gravar linha {row_idx + 1} no IW41.", ev)
+                        return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar a IW41.", ev)
+                    
+                    ev = self._capture_success_evidence(evidence_path)
+                    modo_txt = "REAL" if is_real_mode else "SIMULADO"
+                    return SapResult("PASS", "OK", f"IW41 executada em 1 operação (Acesso Direto) e salva com sucesso. ({modo_txt})", ev)
 
-                    processed += 1
+                except Exception:
+                    return SapResult("FAIL", "NOT_FOUND", "Tabela não encontrada e acesso direto falhou na IW41.", self._capture_error_evidence(evidence_path, "TABLE_MISSING"))
 
-                    voltou = False
-                    for _ in range(3):
-                        try:
-                            self.session.findById("wnd[0]").sendVKey(0)
-                            time.sleep(0.6)
-                        except Exception:
-                            pass
+            table = self.session.findById(table_id)
+            max_rows = int(getattr(table, "RowCount", 50))
+            processed = 0
 
-                        if self._table_exists(table_id):
-                            voltou = True
-                            break
+            for row_idx in range(max_rows):
+                try:
+                    table.VerticalScrollbar.Position = row_idx
+                except: pass
 
-                        try:
-                            self.session.findById("wnd[0]").sendVKey(12)
-                            time.sleep(0.6)
-                        except Exception:
-                            pass
+                visible_row = row_idx
+                try:
+                    visible_row = row_idx - int(table.VerticalScrollbar.Position)
+                except: pass
 
-                        if self._table_exists(table_id):
-                            voltou = True
-                            break
+                try:
+                    icon_id = f"wnd[0]/usr/tblSAPLCORUTC_3100/txtCORUF-UPD_ICON[0,{visible_row}]"
+                    self.session.findById(icon_id).setFocus()
+                    self.session.findById("wnd[0]").sendVKey(2) 
+                    time.sleep(0.8)
+                except Exception:
+                    break 
+                
+                if self._popup_exists():
+                    self.session.findById("wnd[1]").sendVKey(0)
+                    time.sleep(0.5)
 
-                    if not voltou and not self._table_exists(table_id):
-                        break
+                if self._table_exists(table_id):
+                    try:
+                        self.session.findById("wnd[0]").sendVKey(0)
+                        time.sleep(0.3)
+                    except: pass
+                    break
 
-                    row_idx += 1
+                self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-PERNR", pernr)
+                self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-ISDD", data_inicio)
+                self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-ISDZ", hora_inicio)
+                self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-IEDD", data_fim)
+                self._set_text_if_exists("wnd[0]/usr/ctxtAFRUD-IEDZ", hora_fim)
+                
+                conf_final_id = mapping.get("Conf.final") or mapping_norm.get(self._norm_key("Conf.final"))
+                baixa_res_id = mapping.get("Dar baixa res.") or mapping_norm.get(self._norm_key("Dar baixa res."))
+                self._set_checkbox_if_exists(conf_final_id, False)
+                self._set_checkbox_if_exists(baixa_res_id, False)
 
+                self.session.findById("wnd[0]").sendVKey(0) # Enter
+                time.sleep(0.5)
+
+                if self._popup_exists():
+                    self.session.findById("wnd[1]").sendVKey(0)
+                    time.sleep(0.5)
+
+                self.session.findById("wnd[0]/tbar[0]/btn[3]").press() 
+                time.sleep(0.7)
+                
+                processed += 1
+
+            if processed > 0:
+                self._safe_press_save(mode=mode)
+                
+                sb_type = self._statusbar_type()
+                sb = self._statusbar_text()
+                
+                if is_real_mode and sb_type in {"E", "A", "X"}:
+                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar a IW41.", ev)
+                
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
-                return SapResult("PASS", "OK", f"IW41 executado com sucesso em {processed} linha(s). ({modo_txt})", ev)
-
-            self._set_checkbox_if_exists(conf_final_id, False)
-            self._set_checkbox_if_exists(baixa_res_id, False)
-
-            if pernr and pernr_id:
-                self._set_text_if_exists(pernr_id, pernr)
-
-            self._set_text_if_exists(isdd_id, data_inicio) 
-            self._set_text_if_exists(isdz_id, hora_inicio) 
-            self._set_text_if_exists(iedd_id, data_fim)    
-            self._set_text_if_exists(iedz_id, hora_fim)
-
-            self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.7)
-
-            self._safe_press_save(mode=mode)
-
-            sb_type = self._statusbar_type()
-            sb = self._statusbar_text()
-            if is_real_mode and sb_type in {"E", "A", "X"}:
-                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP no IW41.", ev)
-
-            ev = self._capture_success_evidence(evidence_path)
-            modo_txt = "REAL" if is_real_mode else "SIMULADO"
-            return SapResult("PASS", "OK", (sb or f"IW41 executado com sucesso. ({modo_txt})"), ev)
+                return SapResult("PASS", "OK", f"IW41 executada em {processed} operação(ões) e salva com sucesso. ({modo_txt})", ev)
+            else:
+                return SapResult("FAIL", "NO_DATA", "Nenhuma operação válida encontrada para apontar.", self._capture_error_evidence(evidence_path, "NO_DATA"))
 
         except Exception as e:
             dump = dump_screen(self.session) if self.session else ""
@@ -781,6 +740,16 @@ class SapAutomation:
             return SapResult("FAIL", "EXCEPTION", str(e), ev)
         
     # PP
+    def _get_proximo_dia_util(self) -> str:
+        """Soma +1 dia. Se cair no sábado (5) soma 2, se cair no domingo (6) soma 1 para cair na segunda."""
+        hoje = datetime.now()
+        proximo = hoje + timedelta(days=1)
+        if proximo.weekday() == 5: 
+            proximo += timedelta(days=2)
+        elif proximo.weekday() == 6: 
+            proximo += timedelta(days=1)
+        return proximo.strftime("%d.%m.%Y")
+    
     def _run_pp_order_flow(self, tcode, parameters, evidence_path, mode):        
         tcode_u = tcode.upper()
         self.open_tcode(tcode_u)
@@ -811,10 +780,18 @@ class SapAutomation:
                 except: 
                     pass
                 
-                amanha = (datetime.now() + timedelta(days=1)).strftime("%d.%m.%Y")
-                parameters["Data início"] = amanha
+                hoje = datetime.now()
+                proximo = hoje + timedelta(days=1)
+                if proximo.weekday() == 5: 
+                    proximo += timedelta(days=2)
+                elif proximo.weekday() == 6:
+                    proximo += timedelta(days=1)
+                
+                nova_data = proximo.strftime("%d.%m.%Y")
+                parameters["Data início"] = nova_data    
                 
                 self.apply_parameters_dict("CO02_DATAS", parameters)
+                
                 self.session.findById("wnd[0]").sendVKey(0)
                 time.sleep(0.8)
                 
@@ -823,7 +800,7 @@ class SapAutomation:
                     time.sleep(0.5)
                 
                 self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
-                time.sleep(1.0)
+                time.sleep(1.0) 
                 
                 popup_msgs = []
                 if self._popup_exists():
@@ -831,19 +808,25 @@ class SapAutomation:
                     if txt: popup_msgs.append(txt)
                     
                     try:
-                        self.session.findById("wnd[1]/usr/btnSPOP-OPTION1").press()
+                        self.session.findById("wnd[1]/usr/btnSPOP-OPTION2").press()
                     except:
                         try:
-                            self.session.findById("wnd[1]/usr/btnBUTTON_1").press()
+                            self.session.findById("wnd[1]/usr/btnBUTTON_2").press()
                         except:
                             self.session.findById("wnd[1]").sendVKey(0)
                     time.sleep(1.0)
+                    
+                    try:
+                        self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+                        time.sleep(1.0)
+                    except:
+                        pass
                 
                 sb = self._statusbar_text()
                 ev = self._capture_success_evidence(evidence_path)
-                msg = sb or "Data modificada e ordem salva com sucesso"
+                msg = sb or f"Data modificada para {nova_data} e ordem recalculada."
                 if popup_msgs:
-                    msg += f" | POPUPS IGNORADOS: {' || '.join(popup_msgs)}"
+                    msg += f" | POPUPS: {' || '.join(popup_msgs)}"
                 return SapResult("PASS", "OK", msg, ev)
                 
             elif fluxo == "LIBERAR_IMPRIMIR":
@@ -1254,7 +1237,7 @@ class SapAutomation:
             except Exception:
                 pass
             
-            if tcode_u in ["CO02", "CO11N"] and "Ordem" not in parameters:
+            if tcode_u in ["CO02", "CO11N", "IW32", "IW41"] and "Ordem" not in parameters:
                 if shared_context and "Ordem" in shared_context:
                     parameters["Ordem"] = shared_context["Ordem"]
                         
