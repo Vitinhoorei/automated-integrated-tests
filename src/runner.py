@@ -98,6 +98,7 @@ def run_excel_tests(
         MAX_RETRY = 3
 
         while True:
+            sap.debug_logs.clear()
 
             result = sap.run_tcode(
                 item.tcode,
@@ -109,7 +110,7 @@ def run_excel_tests(
             )
             
             if result.status != "PASS":
-                print("DEBUG SAP MESSAGE:", result.message)
+                sap.log_debug(f"DEBUG SAP MESSAGE: {result.message}")
             
             # PASS
             if result.status == "PASS":
@@ -139,7 +140,7 @@ def run_excel_tests(
                     elif "ordem" in result.message.lower():
                         ai.shared_context["Ordem"] = id_gerado
                     
-                    print(f"ID Detectado: {id_gerado}")
+                    sap.log_debug(f"ID Detectado: {id_gerado}")
 
                 write_status_with_fix_details(
                     xlsx_path=work_xlsx,
@@ -208,7 +209,6 @@ def run_excel_tests(
                     retry_count += 1
                     continue
 
-            # FAIL DEFINITIVO
             write_status_with_fix_details(
                 xlsx_path=work_xlsx,
                 sheet_name=item.sheet_name,
@@ -221,6 +221,10 @@ def run_excel_tests(
                 fix_justification=f"{justificativa} | Modo: {mode}",
                 evidence_path=result.evidence_path,
             )
+
+            if sap.debug_logs:
+                for msg in sap.debug_logs:
+                    print(msg)
 
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
@@ -239,7 +243,6 @@ def run_excel_tests(
         try:
             format_output_sheet(work_xlsx, sname)
         except Exception as e:
-
             print(
                 f"[WARN] Falha ao formatar aba '{sname}': {e}"
             )
