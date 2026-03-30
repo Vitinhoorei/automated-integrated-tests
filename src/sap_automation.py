@@ -24,6 +24,11 @@ class SapAutomation:
     def __init__(self, field_map_path: str = "configs/field_map.yaml"):
         self.session = None
         self.field_map = self._load_field_map(field_map_path)
+        self.debug_logs = []
+
+    def log_debug(self, msg: str):
+        """Guarda o print no caderninho em vez de cuspir na tela."""
+        self.debug_logs.append(msg)
 
     def connect_existing_session(self) -> None:
         sap_gui_auto = win32com.client.GetObject("SAPGUI")
@@ -43,24 +48,115 @@ class SapAutomation:
         except FileNotFoundError:
             return {}
         
-    def go_to_initial_screen(self) -> None:
-        """Força a volta para a tela inicial limpando inclusive popups de saída."""
+    def _is_easy_access(self) -> bool:
         self._ensure_session()
         try:
-            for _ in range(3):
+            tx = str(self.session.Info.Transaction).strip().upper()
+            if tx == "SESSION_MANAGER":
+                return True
+        except Exception:
+            pass
+
+        try:
+            title = str(self.session.findById("wnd[0]").Text).strip().upper()
+            if "SAP EASY ACCESS" in title:
+                return True
+        except Exception:
+            pass
+
+        return False
+
+    def _close_secondary_windows(self) -> None:
+        self._ensure_session()
+        try:
+            count = int(self.session.Children.Count)
+        except Exception:
+            return
+
+        for idx in range(count - 1, 0, -1):
+            try:
+                self.session.findById(f"wnd[{idx}]").close()
+                time.sleep(0.3)
+            except Exception:
+                try:
+                    self.session.findById(f"wnd[{idx}]").sendVKey(12)
+                    time.sleep(0.3)
+                except Exception:
+                    pass
+
+    def _press_easy_access_button(self) -> bool:
+        self._ensure_session()
+
+        try:
+            root = self.session.findById("wnd[0]/usr")
+        except Exception:
+            return False
+
+        stack = [root]
+        targets = ("EXECUTAR SAP EASY ACCESS", "SAP EASY ACCESS")
+
+        while stack:
+            node = stack.pop()
+            try:
+                txt = str(getattr(node, "Text", "")).strip().upper()
+                typ = str(getattr(node, "Type", "")).strip().upper()
+
+                if ("BTN" in typ or "BUTTON" in typ) and any(t in txt for t in targets):
+                    node.press()
+                    time.sleep(1.0)
+                    return True
+            except Exception:
+                pass
+
+            try:
+                for i in range(node.Children.Count - 1, -1, -1):
+                    stack.append(node.Children(i))
+            except Exception:
+                pass
+
+        return False
+
+    def go_to_initial_screen(self) -> None:
+        self._ensure_session()
+        last_error = None
+
+        for tentativa in range(5):
+            try:
+                self._close_secondary_windows()
+
                 while self._popup_exists():
                     self._dismiss_popup()
                     time.sleep(0.3)
-                
+
+                if self._is_easy_access():
+                    return
+
                 self.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
                 self.session.findById("wnd[0]").sendVKey(0)
-                time.sleep(0.5)
-                
-                if not self._popup_exists():
-                    break
-                
-        except Exception:
-            pass
+                time.sleep(1.0)
+
+                while self._popup_exists():
+                    self._dismiss_popup()
+                    time.sleep(0.3)
+
+                if self._is_easy_access():
+                    return
+
+                if self._press_easy_access_button() and self._is_easy_access():
+                    return
+
+                try:
+                    title = self.session.findById("wnd[0]").Text
+                except Exception:
+                    title = "desconhecida"
+
+                self.log_debug(f"[go_to_initial_screen] tentativa={tentativa+1} | tela_atual={title}")
+
+            except Exception as e:
+                last_error = e
+                self.log_debug(f"[go_to_initial_screen] erro na tentativa {tentativa+1}: {e}")
+
+        raise RuntimeError(f"Não foi possível garantir SAP Easy Access. Último erro: {last_error}")
 
     @staticmethod
     def _norm_key(text: str) -> str:
@@ -555,6 +651,10 @@ class SapAutomation:
         try:
             tcode_u = tcode.upper()
             is_real_mode = self._is_real_mode(mode)
+
+            self.open_tcode(tcode_u)
+            time.sleep(1.0)
+
             mapping = {}
             for k, v in self.field_map.get(tcode_u, {}).items():
                 if isinstance(v, dict):
@@ -584,10 +684,20 @@ class SapAutomation:
             def safe_set_key(key_name):
                 val = get_val(key_name)
                 if val:
+                    control_id = get_id(key_name)
                     try:
-                        self.session.findById(get_id(key_name)).key = val
+                        ctrl = self.session.findById(control_id)
                     except Exception:
-                        raise Exception(f"Combo '{key_name}' não encontrado na tela. O SAP travou.")
+                        raise Exception(f"Campo/Combo '{key_name}' não encontrado. ID esperado: {control_id}")
+
+                    for attr in ("key", "text", "value"):
+                        try:
+                            setattr(ctrl, attr, val)
+                            return
+                        except Exception:
+                            pass
+
+                    raise Exception(f"Não foi possível preencher '{key_name}'. ID: {control_id}")
 
             ctg = get_val("Ctg.plano de manutenção") or get_val("Ctg.plano manutenção") or get_val("Ctg.plano manut.")
             if ctg:
@@ -616,7 +726,13 @@ class SapAutomation:
 
             if tcode_u == "IP41":
                 safe_set_text("Ciclo")
-                safe_set_text("Unidade do ciclo")
+
+                unidade_ciclo = (get_val("Unidade do ciclo") or get_val("Unidade") or get_val("Unidade de medida"))
+                if unidade_ciclo:
+                    try:
+                        self.session.findById(get_id("Unidade do ciclo")).text = unidade_ciclo
+                    except Exception:
+                        raise Exception("Campo 'Unidade do ciclo' não encontrado.")
 
             safe_set_text("Local de instalação")
 
@@ -630,8 +746,40 @@ class SapAutomation:
             safe_set_text("Tipo de ordem")
             safe_set_text("Tipo de atividade de manutenção")
 
+            try:
+                id_ilart = get_id("Tipo de atividade de manutenção")
+                campo_ilart = self.session.findById(id_ilart)
+                campo_ilart.setFocus()
+                try:
+                    campo_ilart.caretPosition = len(str(get_val("Tipo de atividade de manutenção")))
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
             self.session.findById("wnd[0]").sendVKey(0)
-            time.sleep(0.8)
+            time.sleep(1.2)
+
+            if self._popup_exists():
+                self.session.findById("wnd[1]").sendVKey(0)
+                time.sleep(0.5)
+
+            sb = self._statusbar_text()
+            sb_type = self._statusbar_type()
+            self.log_debug(f"[{tcode_u}] após ENTER do ILART | status={sb_type} | msg={sb}")
+
+            if self._popup_exists():
+                self.session.findById("wnd[1]").sendVKey(0)
+                time.sleep(0.5)
+
+            sb = self._statusbar_text()
+            sb_type = self._statusbar_type()
+            self.log_debug(f"[{tcode_u}] antes da prioridade | status={sb_type} | msg={sb}")
+
+            if sb_type in {"E", "A", "X"}:
+                raise Exception(f"Erro SAP antes de preencher Prioridade: {sb or 'sem mensagem'}")
+
+            self.log_debug(f"[{tcode_u}] ID Prioridade = {get_id('Prioridade')}")
             safe_set_key("Prioridade")
 
             try:
@@ -911,20 +1059,18 @@ class SapAutomation:
         ordem = parameters.get("Ordem", "")
         operacoes_lista = []
         
+        aufnr_id = "wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-AUFNR"
+        vornr_id = "wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-VORNR"
+
+        self.open_tcode("CO11N")
+        time.sleep(0.8)
+        
         if ops_str:
             operacoes_lista = [op.strip() for op in str(ops_str).split(",")]
         else:
-            self.open_tcode("CO11N")
-            self.apply_parameters_dict("CO11N", {"Ordem": ordem})
-            time.sleep(0.5)
-            
             try:
-                try: 
-                    op_field = self.field_map["CO11N"]["SAPLCORU_S|0010"]["Operação"]
-                except: 
-                    op_field = "wnd[0]/usr/ssubSUB01:SAPLCORU_S:0010/subSLOT_HDR:SAPLCORU_S:0117/ctxtAFRUD-VORNR"
-                
-                self.session.findById(op_field).setFocus()
+                self.session.findById(aufnr_id).text = ordem
+                self.session.findById(vornr_id).setFocus()
                 self.session.findById("wnd[0]").sendVKey(4) 
                 time.sleep(1.0)
                 
@@ -932,61 +1078,61 @@ class SapAutomation:
                     try:
                         for child in self.session.findById("wnd[1]/usr").Children:
                             txt = str(getattr(child, "Text", "")).strip()
-                            
                             if len(txt) == 4 and txt.isdigit() and txt.startswith("0"):
                                 if txt not in operacoes_lista:
                                     operacoes_lista.append(txt)
                     except: pass
                     
-                    self.session.findById("wnd[1]").sendVKey(12) 
+                    self.session.findById("wnd[1]/tbar[0]/btn[12]").press() 
                     time.sleep(0.5)
             except Exception as e:
-                print(f"[Aviso] Falha ao escanear as operações: {e}")
+                self.log_debug(f"[Aviso] Falha ao escanear as operações: {e}")
                 
             operacoes_lista.sort()
         
-            if not operacoes_lista:
-                operacoes_lista = ["AUTO"]
+        if not operacoes_lista:
+            operacoes_lista = ["0010"]
                 
-        print(f"\n[DEBUG CO11N] Operações encontradas para apontar: {operacoes_lista}")
-        
-        resultado_final = None
+        self.log_debug(f"[DEBUG CO11N] Operações encontradas para apontar: {operacoes_lista}")
+        processed = 0
         
         for op in operacoes_lista:
-            self.open_tcode("CO11N")
-            
-            dados_tela = {"Ordem": ordem}
-            if op != "AUTO":
-                dados_tela["Operação"] = op
-                
-            self.apply_parameters_dict("CO11N", dados_tela)
-            time.sleep(0.5)
-            
-            if op == "AUTO":
-                try:
-                    self.session.findById(op_field).setFocus()
-                    self.session.findById("wnd[0]").sendVKey(4)
-                    time.sleep(1.0)
-                    if self._popup_exists():
-                        self.session.findById("wnd[1]").sendVKey(2) 
-                        time.sleep(0.8)
-                except: pass
+            self.session.findById(aufnr_id).text = ordem
+            self.session.findById(vornr_id).text = op
             
             self.session.findById("wnd[0]").sendVKey(0) 
             time.sleep(1.0)
+            
+            tentativas_enter = 0
+            while self._statusbar_type() in ["W", "I"] and tentativas_enter < 3:
+                self.session.findById("wnd[0]").sendVKey(0)
+                time.sleep(0.5)
+                tentativas_enter += 1
             
             if self._popup_exists():
                 self.session.findById("wnd[1]").sendVKey(0)
                 time.sleep(0.5)
                 
-            if self._statusbar_type() in ["W", "S", "I"]:
+            self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
+            time.sleep(1.0)
+            
+            tentativas_save = 0
+            while self._statusbar_type() in ["W", "I"] and tentativas_save < 3:
                 self.session.findById("wnd[0]").sendVKey(0)
-                time.sleep(0.5)
-            
-            resultado_final = self._finalizar_pelo_modo_universal("CO11N", mode, evidence_path)
-            
-        return resultado_final or SapResult("PASS", "OK", f"Apontamento concluído: {operacoes_lista}")
+                time.sleep(0.8)
+                tentativas_save += 1
 
+            processed += 1
+            
+        try:
+            self.session.findById("wnd[0]/tbar[0]/btn[15]").press()
+            time.sleep(0.5)
+        except: pass
+
+        ev = self._capture_success_evidence(evidence_path)
+        modo_txt = "REAL" if self._is_real_mode(mode) else "SIMULADO"
+        return SapResult("PASS", "OK", f"CO11N concluída. {processed} operação(ões) apontada(s) e salvas com sucesso. ({modo_txt})", ev)
+    
     def _run_pp_co07_flow(self, parameters, evidence_path, mode):
         self.open_tcode("CO07")
         self.apply_parameters_dict("CO07", parameters)
@@ -1019,7 +1165,7 @@ class SapAutomation:
             self.apply_parameters_dict("CO07", parameters)
             self.session.findById("wnd[0]").sendVKey(0)
         except Exception as e:
-            print(f"Aviso: Falha ao acessar aba de Atribuição na CO07: {e}")
+            self.log_debug(f"Aviso: Falha ao acessar aba de Atribuição na CO07: {e}")
         
         return self._finalizar_pelo_modo_universal("CO07", mode, evidence_path)
     
@@ -1155,11 +1301,18 @@ class SapAutomation:
 
     def open_tcode(self, tcode: str) -> None:
         self._ensure_session()
+        self.go_to_initial_screen()
+
         if self._popup_exists():
             self._dismiss_popup()
-        self.session.findById("wnd[0]/tbar[0]/okcd").text = f"/n{tcode.upper()}"
+
+        self.session.findById("wnd[0]/tbar[0]/okcd").text = tcode.upper()
         self.session.findById("wnd[0]").sendVKey(0)
-        time.sleep(0.6)
+        time.sleep(1.0)
+
+        sb_type = self._statusbar_type()
+        if sb_type in {"E", "A", "X"}:
+            raise RuntimeError(self._statusbar_text() or f"Falha ao abrir a transação {tcode.upper()}.")
 
     def execute_default(self) -> None:
         self.session.findById("wnd[0]").sendVKey(0)
@@ -1358,18 +1511,17 @@ class SapAutomation:
                 try:
                     self.session.findById("wnd[0]/tbar[0]/btn[86]").press()
                     time.sleep(1.5)
+
                     self.session.findById("wnd[1]/usr/tblSAPLIPRTTC_WORKPAPERS").getAbsoluteRow(8).selected = True
+                    
                     self.session.findById("wnd[1]/tbar[0]/btn[16]").press()
                     time.sleep(3.0)
+
                     ev = self._capture_success_evidence(evidence_path)
                     msg = "Visualização de impressão gerada com sucesso."
-                    try:
-                        self.session.findById("wnd[0]/tbar[0]/btn[12]").press()
-                        time.sleep(0.8)
-                        if self._popup_exists(): self._dismiss_popup()
-                        self.session.findById("wnd[0]/tbar[0]/btn[12]").press()
-                    except: pass
+                    
                     return SapResult("PASS", "OK", f"{msg} ({exec_mode.upper()})", ev)
+                
                 except Exception as e:
                     ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
                     return SapResult("FAIL", "EXCEPTION", f"Falha na impressão: {e}", ev)

@@ -98,6 +98,7 @@ def run_excel_tests(
         MAX_RETRY = 3
 
         while True:
+            sap.debug_logs.clear()
 
             result = sap.run_tcode(
                 item.tcode,
@@ -109,7 +110,7 @@ def run_excel_tests(
             )
             
             if result.status != "PASS":
-                print("DEBUG SAP MESSAGE:", result.message)
+                sap.log_debug(f"DEBUG SAP MESSAGE: {result.message}")
             
             # PASS
             if result.status == "PASS":
@@ -139,7 +140,7 @@ def run_excel_tests(
                     elif "ordem" in result.message.lower():
                         ai.shared_context["Ordem"] = id_gerado
                     
-                    print(f"ID Detectado: {id_gerado}")
+                    sap.log_debug(f"ID Detectado: {id_gerado}")
 
                 write_status_with_fix_details(
                     xlsx_path=work_xlsx,
@@ -208,7 +209,6 @@ def run_excel_tests(
                     retry_count += 1
                     continue
 
-            # FAIL DEFINITIVO
             write_status_with_fix_details(
                 xlsx_path=work_xlsx,
                 sheet_name=item.sheet_name,
@@ -222,6 +222,10 @@ def run_excel_tests(
                 evidence_path=result.evidence_path,
             )
 
+            if sap.debug_logs:
+                for msg in sap.debug_logs:
+                    print(msg)
+
             print(
                 f"[{item.sheet_name} r{item.row_index}] "
                 f"{item.tcode} ({mode}) -> FAIL | {causa} | "
@@ -230,17 +234,15 @@ def run_excel_tests(
 
             if sap.session:
                 try:
-                    sap.session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
-                    sap.session.findById("wnd[0]").sendVKey(0)
-                except Exception:
-                    pass
+                    sap.go_to_initial_screen()
+                except Exception as e:
+                    print(f"[runner] falha ao voltar para tela inicial: {e}")
             break
 
     for sname in processed_sheets:
         try:
             format_output_sheet(work_xlsx, sname)
         except Exception as e:
-
             print(
                 f"[WARN] Falha ao formatar aba '{sname}': {e}"
             )
