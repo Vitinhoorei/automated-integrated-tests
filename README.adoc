@@ -1,7 +1,7 @@
 = 🤖 SAP AI-Driven Automation Tester
 :icons: font
 :toc: left
-:toclevels: 2
+:toclevels: 3
 
 [.text-center]
 link:#portugues[🇧🇷 Português] | link:#english[🇺🇸 English]
@@ -11,150 +11,241 @@ link:#portugues[🇧🇷 Português] | link:#english[🇺🇸 English]
 
 === 📝 Descrição
 
-O **SAP AI-Driven Automation Tester** é uma solução desenvolvida em **Python** para automatizar testes integrados no sistema **SAP**, com foco em processos do módulo **PM (Plant Maintenance)**.
+O *SAP AI-Driven Automation Tester* é uma solução desenvolvida em *Python* para automatizar testes unitários e integrados no sistema *SAP*, combinando automação de interface, processamento com Inteligência Artificial, execução orientada por planilhas Excel e captura estruturada de evidências.
 
-O sistema combina:
+O sistema nasceu com foco no módulo *PM (Plant Maintenance)*, mas vem evoluindo para uma *Engine Core Agnóstica de Módulos SAP*, preparada para suportar diferentes fluxos e módulos, como *PM, PP, MM e SD*, sem a necessidade de reescrever o núcleo da aplicação.
 
-* **Automação de Interface SAP GUI (SAP GUI Scripting)**
-* **Processamento com Inteligência Artificial**
-* **Execução automatizada de cenários de teste**
-* **Captura estruturada de evidências**
-
-A ferramenta é capaz de:
-
-* interpretar cenários definidos em **planilhas Excel**
-* executar **transações SAP automaticamente**
-* capturar **prints e evidências**
-* identificar **erros técnicos ou dumps**
-* gerar **relatórios estruturados**
+As regras específicas de cada módulo são tratadas como expansões da solução, permitindo escalabilidade, manutenção simplificada e reaproveitamento da base técnica.
 
 ---
 
 === 🎯 Problema e Impacto
 
-Tradicionalmente, a validação de fluxos de manutenção no SAP exige grande esforço manual.
+Tradicionalmente, a validação de fluxos no SAP exige alto esforço manual, tanto na execução quanto na coleta de evidências.
 
-**Cenário anterior**
+*Cenário anterior*
 
 * Execução manual de testes
 * Captura manual de evidências
 * Alto risco de erro humano
+* Maior tempo operacional para validação dos fluxos
 
 O ciclo completo de testes podia levar cerca de:
 
-**6 semanas**
+*6 semanas*
 
-**Com a automação**
+*Com a automação*
 
-O sistema executa os testes automaticamente e gera as evidências.
+O sistema executa os cenários automaticamente, registra evidências e reduz a dependência de atividades repetitivas e manuais.
 
 O tempo foi reduzido para aproximadamente:
 
-**até 2 dias**
+*até 2 dias*
 
-**Resultado**
+*Resultado*
 
-Redução superior a **95% no tempo operacional**, além de:
+Redução superior a *95% no tempo operacional*, além de:
 
 * padronização das evidências
 * redução de erros humanos
-* maior rastreabilidade dos testes
+* aumento da rastreabilidade dos testes
+* melhoria da escalabilidade da operação
 
 ---
 
 === ⚙️ Funcionalidades Principais
 
-* **Integração SAP GUI**  
-Automação nativa utilizando **SAP GUI Scripting (win32com)**.
+* *Interpretação de Cenários via Excel*
+  Leitura de massas de teste, regras de fluxo e parâmetros definidos em planilhas.
 
-* **Execução Automática de Transações**  
-Execução automática de TCODEs com preenchimento de campos.
+* *Automação SAP GUI*
+  Execução nativa de TCODEs, preenchimento de campos, navegação entre telas e interação com elementos da interface via SAP GUI Scripting (*win32com*).
 
-* **Captura de Evidências**  
-Geração automática de prints de tela e dumps estruturados.
+* *Memória de Contexto*
+  Captura de IDs e dados dinâmicos gerados pelo SAP, como ordens e documentos, reutilizando essas informações em etapas posteriores do fluxo.
 
-* **Memória de Contexto**  
-Reutilização de IDs gerados (ex: Notas ou Ordens) em etapas posteriores.
+* *Captura de Evidências*
+  Geração automática de prints, registros de execução e saídas estruturadas para auditoria e validação.
 
-* **Relatório Inteligente**  
-Geração de relatórios em **Excel** com logs detalhados.
+* *Monitoramento de Erros e Dumps*
+  Identificação de falhas técnicas durante a execução, permitindo análise mais rápida dos problemas.
 
-* **Análise de Erros**  
-Em caso de erro ou dump SAP, o sistema coleta evidências e envia para análise.
-
----
-
-=== 🧩 Transações SAP Automatizadas
-
-Atualmente o sistema executa cenários envolvendo as seguintes transações:
-
-* IW21
-* IW31
-* IW32
-* IW34
-* IW41
-* IP41
-* IP42
-
-Essas transações fazem parte dos fluxos de **manutenção e planejamento no SAP PM**.
+* *Processamento com IA*
+  Uso de Inteligência Artificial para apoio em decisões de fluxo, interpretação de cenários e futura reexecução inteligente de testes com correção assistida.
 
 ---
 
-=== ⚙️ Como Executar o Projeto
+=== 🚀 Evolução da Solução
 
-==== 1️⃣ Clonar o repositório
+A solução vem recebendo melhorias voltadas para flexibilidade, robustez e experiência de uso.
 
-[source,bash]
-----
-git clone https://github.com/Vitinhoorei/automated-integrated-tests.git
-cd automated-integrated-tests
-----
+==== Novo modelo de execução de planilhas
 
-==== 2️⃣ Criar ambiente virtual
+O sistema passou a trabalhar com dois modos distintos:
 
-[source,bash]
-----
-python -m venv venv
-----
+* *Modo Simulação*
+  Permite validar o fluxo sem executar de fato no SAP, evitando a necessidade de remover transações da planilha apenas para testes.
 
-Ativar o ambiente:
+* *Modo Execução*
+  Executa o fluxo completo no ambiente SAP.
 
-Windows
+==== Lembretes contextuais na planilha
 
-[source,bash]
-----
-venv\Scripts\activate
-----
+Foram adicionados lembretes no estilo *post-it* nas colunas da planilha para indicar:
 
-Linux / Mac
+* o significado da coluna
+* o tipo de dado esperado
+* o objetivo do campo dentro do fluxo
 
-[source,bash]
-----
-source venv/bin/activate
-----
+Isso facilita o uso do sistema após longos períodos sem operação e reduz a curva de reaprendizado.
 
-==== 3️⃣ Instalar dependências
+==== Geração inteligente de resultados
 
-As dependências estão definidas no arquivo **requirements.txt**
+A saída da automação não sobrescreve mais a planilha de entrada.
 
-[source,bash]
-----
-pip install -r requirements.txt
-----
+Agora o sistema gera automaticamente arquivos com padrão de nomenclatura como:
 
-==== 4️⃣ Executar o sistema
+*Resultado de Automação - PP*
+*Resultado de Automação - PM*
 
-[source,powershell]
-----
-python src/main.py --file "c:\caminho\para\arquivo.xlsx" --sheet "NomeDaAba"
-----
+Isso evita confusão entre arquivo de entrada e resultado processado, além de melhorar a rastreabilidade das execuções.
+
+==== Horário dinâmico no apontamento PM
+
+No apontamento de ordens de manutenção, o horário passou a ser calculado dinamicamente com a lógica:
+
+*hora atual - 2 horas*
+
+Esse ajuste foi implementado conforme necessidade do processo e mantém o fluxo automático após o preenchimento.
+
+==== Datas dinâmicas no módulo PP
+
+No fluxo *CO01*, a data de início passou a utilizar sempre a data atual do sistema, evitando manutenção manual do campo.
+
+No fluxo *CO02* de modificação de datas, foi implementada a lógica:
+
+* Data de início = data atual + 1 dia
+* Data de fim = data atual + 3 dias
 
 Exemplo:
 
-[source,powershell]
-----
-python src/main.py --file "C:\Users\veleoterio\Downloads\Cenarios_PM.xlsx" --sheet "Testes unitarios"
-----
+* Se hoje for dia 26, a data de início será 27
+* A data de fim será 30
+
+==== Tratamento inteligente de operações na CO11N
+
+Como uma ordem pode possuir múltiplas operações, o sistema passou a:
+
+* abrir o popup de operações
+* mapear todas as operações disponíveis
+* capturar os códigos de cada operação
+* executar o fluxo uma operação por vez
+
+Com isso, evita-se execução com operação em branco, fictícia ou incompleta, aumentando a confiabilidade do cenário.
+
+==== Execução otimizada em ações de menu
+
+Em alguns cenários, como no encerramento técnico (*TECO*), o sistema realiza a instrução diretamente no SAP sem depender da renderização visual completa do menu na tela.
+
+Na prática, a execução ocorre de forma mais rápida, com atualização direta do status final.
+
+---
+
+=== 🧩 Cobertura Atual de Módulos e Transações
+
+==== Módulo PM
+
+Atualmente, o sistema já executa com sucesso fluxos relacionados a manutenção, cobrindo as seguintes transações:
+
+* IW21 / IW31 — Criação de notas e ordens de manutenção
+* IW32 / IW34 — Modificação de ordens
+* IW41 — Apontamento de horas
+* IP41 / IP42 — Criação de planos de manutenção
+
+==== Módulo PP
+
+A solução também passou a suportar fluxos do módulo *PP (Production Planning)*, incluindo:
+
+* CO01 — Criar ordem de produção manualmente
+* CO02 — Modificar datas da ordem
+* CO02 — Liberar e imprimir ordens
+* CO02 — Realizar encerramento técnico (TECO)
+* CO07 — Criar ordem sem material
+* CO11N — Apontar ordens com suporte a múltiplas operações
+
+---
+
+=== 🧠 Melhoria em Desenvolvimento: Reexecução Inteligente com IA
+
+Uma evolução já iniciada no sistema é a capacidade de *reexecutar testes automaticamente com apoio de IA* quando um erro é identificado por falta ou inconsistência de dados.
+
+A proposta é que, ao detectar uma falha, o sistema:
+
+* identifique a linha da planilha correspondente ao teste
+* analise os dados já preenchidos
+* consulte um mini banco de dados interno com valores possíveis e válidos
+* proponha a melhor correção
+* refaça o teste automaticamente com o novo valor
+
+==== Caso inicial implementado
+
+O primeiro cenário iniciado para essa inteligência é o campo *TipoAtvMnt* (*Tipo de Atividade de Manutenção*).
+
+Se o usuário deixar esse campo em branco na planilha e o teste falhar por esse motivo, a IA avalia o contexto do cenário e consulta o mini banco de dados interno para identificar o valor mais adequado.
+
+Em um caso já iniciado, o sistema consegue inferir que o valor *31* é o mais adequado para aquele teste e reexecuta o fluxo com esse preenchimento.
+
+==== Status atual
+
+* Estrutura inicial criada
+* Primeira regra funcional implementada
+* Reexecução automática em cenário inicial disponível
+* Arquitetura em evolução para suportar novos campos e regras
+
+==== Próximos passos previstos
+
+* expansão para outros campos obrigatórios
+* evolução do mini banco de dados interno
+* estudo de integração com API ou base de dados SAP, se aplicável
+* registro de decisões automáticas em log
+* amadurecimento do mecanismo de confiança da IA
+
+Essa frente ainda está em desenvolvimento, mas já representa um avanço importante rumo a uma automação mais resiliente, adaptativa e inteligente.
+
+---
+
+=== 🏗️ Arquitetura e Direcionamento Técnico
+
+A evolução da solução está orientada para uma arquitetura mais modular e expansível.
+
+Entre os principais direcionamentos técnicos estão:
+
+* núcleo desacoplado de regras específicas de módulo
+* tratamento mais robusto de pop-ups dinâmicos
+* suporte a loops condicionais em fluxos complexos
+* reaproveitamento de contexto entre transações
+* melhoria contínua do uso de IA em cenários de falha
+
+Esse direcionamento permite que a solução cresça com menor custo técnico e maior capacidade de absorver novas transações SAP no futuro.
+
+---
+
+=== ✅ Benefícios da Evolução
+
+Com as melhorias implementadas e em desenvolvimento, a solução entrega:
+
+* redução de esforço manual
+* maior confiabilidade dos testes
+* melhor organização dos resultados
+* reaproveitamento do núcleo para novos módulos
+* maior facilidade de manutenção
+* execução mais rápida e inteligente
+* melhor experiência para o usuário operador
+* maior controle e rastreabilidade do processo
+
+---
+
+=== ⚙️ Como Instalar e Rodar
 
 ---
 
@@ -163,140 +254,241 @@ python src/main.py --file "C:\Users\veleoterio\Downloads\Cenarios_PM.xlsx" --she
 
 === 📝 Description
 
-The **SAP AI-Driven Automation Tester** is a **Python-based automation framework** designed to execute integrated tests within the **SAP system**, focusing on the **Plant Maintenance (PM)** module.
+The *SAP AI-Driven Automation Tester* is a *Python-based solution* built to automate unit and integrated tests in the *SAP* environment, combining interface automation, Artificial Intelligence, Excel-driven execution and structured evidence capture.
 
-The solution combines:
+The project was originally focused on the *PM (Plant Maintenance)* module, but it is evolving into an *agnostic SAP Core Engine* capable of supporting multiple SAP modules such as *PM, PP, MM and SD* without rewriting the core foundation.
 
-* **SAP GUI interface automation**
-* **Artificial Intelligence**
-* **Automated execution of test scenarios**
-* **Structured evidence collection**
-
-The system can:
-
-* interpret **Excel-based test scenarios**
-* execute **SAP transactions automatically**
-* capture **screenshots and technical dumps**
-* analyze **errors and system failures**
-* generate **structured Excel reports**
+Module-specific rules are treated as extensions of the solution, which improves scalability, maintainability and long-term reuse of the technical base.
 
 ---
 
 === 🎯 Problem and Impact
 
-Traditionally, validating SAP maintenance flows required a significant amount of manual work.
+Traditionally, validating SAP process flows requires significant manual effort for both execution and evidence collection.
 
-**Previous scenario**
+*Previous scenario*
 
-* Manual execution of transactions
-* Manual evidence collection
-* High risk of human errors
+* Manual test execution
+* Manual evidence capture
+* High risk of human error
+* Longer operational time for validation
 
 A complete testing cycle could take around:
 
-**6 weeks**
+*6 weeks*
 
-**With automation**
+*With automation*
 
-The automated system executes scenarios and captures all required evidence.
+The system executes scenarios automatically, records evidence and reduces dependency on repetitive manual activities.
 
 Execution time was reduced to approximately:
 
-**2 days**
+*up to 2 days*
 
-**Result**
+*Result*
 
-More than **95% reduction in operational time**, along with:
+More than *95% reduction in operational time*, along with:
 
 * standardized evidence
 * reduced human errors
 * improved test traceability
+* better operational scalability
 
 ---
 
 === ⚙️ Key Features
 
-* **SAP GUI Integration**  
-Native automation using **SAP GUI Scripting (win32com)**.
+* *Excel-Driven Scenario Interpretation*
+  Reads test datasets, execution logic and flow definitions from spreadsheets.
 
-* **Automatic Transaction Execution**
+* *SAP GUI Automation*
+  Native execution of SAP TCODEs, field input, screen navigation and GUI interaction using SAP GUI Scripting (*win32com*).
 
-* **Evidence Capture**
-Automated screenshots and structured screen dumps.
+* *Context Memory*
+  Captures dynamic SAP-generated data, such as order numbers and document identifiers, and reuses them in later steps.
 
-* **Context Memory**
-Reuses generated IDs (e.g., Notifications or Orders) between steps.
+* *Evidence Capture*
+  Automatically generates screenshots, execution logs and structured outputs for audit and validation purposes.
 
-* **Smart Reporting**
-Excel output with detailed logs.
+* *Error and Dump Monitoring*
+  Identifies technical failures during execution, enabling faster troubleshooting.
 
-* **Error Analysis**
-Technical failures and dumps can be analyzed automatically.
-
----
-
-=== 🧩 Automated SAP Transactions
-
-The system currently executes scenarios involving the following SAP transactions:
-
-* IW21
-* IW31
-* IW32
-* IW34
-* IW41
-* IP41
-* IP42
-
-These transactions are part of **maintenance and planning flows within SAP PM**.
+* *AI-Assisted Processing*
+  Uses Artificial Intelligence to support flow decisions, scenario interpretation and future intelligent retry capabilities with assisted correction.
 
 ---
 
-=== ⚙️ How to Run the Project
+=== 🚀 Solution Evolution
 
-==== 1️⃣ Clone the repository
+The solution has been receiving improvements focused on flexibility, robustness and usability.
 
-[source,bash]
-----
-git clone https://github.com/Vitinhoorei/automated-integrated-tests.git
-cd automated-integrated-tests
-----
+==== New spreadsheet execution model
 
-==== 2️⃣ Create a virtual environment
+The system now supports two execution modes:
 
-[source,bash]
-----
-python -m venv venv
-----
+* *Simulation Mode*
+  Allows validation of the flow without actually executing it in SAP, avoiding the need to remove transactions from the spreadsheet just to perform tests.
 
-Activate environment:
+* *Execution Mode*
+  Runs the full process in SAP.
 
-Windows
+==== Spreadsheet reminders
 
-[source,bash]
-----
-venv\Scripts\activate
-----
+Contextual notes in a *post-it* style were added to spreadsheet columns to explain:
 
-Linux / Mac
+* what the column means
+* which type of value is expected
+* what role that field plays in the flow
 
-[source,bash]
-----
-source venv/bin/activate
-----
+This improves usability, especially when the system is used again after a long period.
 
-==== 3️⃣ Install dependencies
+==== Smart result generation
 
-[source,bash]
-----
-pip install -r requirements.txt
-----
+The automation output no longer overwrites the input spreadsheet.
 
-==== 4️⃣ Run the system
+Instead, the system automatically creates result files using names such as:
 
-[source,powershell]
-----
-python src/main.py --file "c:\path\to\file.xlsx" --sheet "SheetName"
-----
+*Automation Result - PP*
+*Automation Result - PM*
+
+This improves traceability and avoids confusion between source and output files.
+
+==== Dynamic time handling in PM confirmation
+
+For maintenance order time confirmation, the system now applies the following logic dynamically:
+
+*current time - 2 hours*
+
+This was implemented to meet a process requirement while keeping the flow fully automated.
+
+==== Dynamic dates in PP
+
+In *CO01*, the start date now always uses the current system date, avoiding manual maintenance.
+
+In *CO02* date changes, the following logic was implemented:
+
+* Start date = current date + 1 day
+* End date = current date + 3 days
+
+Example:
+
+* If today is the 26th, the start date becomes the 27th
+* The end date becomes the 30th
+
+==== Intelligent operation handling in CO11N
+
+Since an order may contain multiple operations, the system now:
+
+* opens the operation popup
+* maps all available operations
+* captures each operation code
+* executes the flow one operation at a time
+
+This avoids blank, fictitious or incomplete operations and increases execution reliability.
+
+==== Optimized execution in menu actions
+
+In some scenarios, such as technical completion (*TECO*), the system sends the instruction directly within SAP without depending on the full visual rendering of the dropdown menu on screen.
+
+In practice, this makes execution faster and applies the final status more directly.
+
+---
+
+=== 🧩 Current Module and Transaction Coverage
+
+==== PM Module
+
+The system currently runs maintenance-related flows successfully, covering the following transactions:
+
+* IW21 / IW31 — Create maintenance notifications and orders
+* IW32 / IW34 — Modify orders
+* IW41 — Time confirmation
+* IP41 / IP42 — Create maintenance plans
+
+==== PP Module
+
+The solution also supports *PP (Production Planning)* flows, including:
+
+* CO01 — Create production order manually
+* CO02 — Change order dates
+* CO02 — Release and print orders
+* CO02 — Perform technical completion (TECO)
+* CO07 — Create order without material
+* CO11N — Confirm production orders with support for multiple operations
+
+---
+
+=== 🧠 Improvement in Progress: Intelligent Retry with AI
+
+One enhancement already started is the ability to *automatically retry failed tests with AI assistance* whenever an error occurs due to missing or inconsistent data.
+
+The idea is that, when a failure is detected, the system will:
+
+* identify the spreadsheet row related to the failed test
+* analyze the data already provided
+* consult an internal mini database with valid and possible values
+* determine the best correction
+* automatically rerun the test with the corrected value
+
+==== Initial implemented case
+
+The first scenario under development for this capability is the *TipoAtvMnt* field (*Maintenance Activity Type*).
+
+If the user leaves this field blank in the spreadsheet and the test fails because of that, the AI analyzes the test context and checks the internal mini database to determine the most appropriate value.
+
+In an initial working case, the system can infer that the value *31* is the best fit for that scenario and rerun the flow using that value.
+
+==== Current status
+
+* Initial structure created
+* First functional rule implemented
+* Automatic retry available in an initial scenario
+* Architecture evolving to support new fields and rules
+
+==== Planned next steps
+
+* extend support to additional mandatory fields
+* evolve the internal mini database
+* evaluate integration with SAP APIs or SAP data sources, when applicable
+* log automatic decisions
+* improve AI confidence handling
+
+This capability is still in an early stage, but it already represents an important step toward a more resilient, adaptive and intelligent automation platform.
+
+---
+
+=== 🏗️ Architecture and Technical Direction
+
+The solution is evolving toward a more modular and extensible architecture.
+
+Key technical directions include:
+
+* core structure decoupled from module-specific rules
+* stronger handling of dynamic pop-ups
+* support for conditional loops in complex flows
+* reuse of context between transactions
+* continuous improvement of AI-assisted failure handling
+
+This direction allows the solution to grow with lower technical cost and better capacity to absorb new SAP transactions in the future.
+
+---
+
+=== ✅ Evolution Benefits
+
+With the implemented and planned improvements, the solution delivers:
+
+* reduced manual effort
+* higher test reliability
+* better organization of results
+* reuse of the same core for new modules
+* easier maintenance
+* faster and smarter execution
+* better operator experience
+* stronger control and traceability
+
+---
+
+=== ⚙️ How to Install and Run
 
 ---
 
@@ -309,14 +501,14 @@ python src/main.py --file "c:\path\to\file.xlsx" --sheet "SheetName"
 * Requests
 * Pillow
 * Python-Dotenv
-* GenAI / LLM (GPT-4o-mini)
+* GenAI / LLM
 
 ---
 
 == 👨‍💻 Autores / Authors
 
-* **Vitor Eduardo Eleoterio**  
-https://github.com/SGA-OKC
+* *Vitor Eduardo Eleoterio*
+  [https://github.com/SGA-OKC](https://github.com/SGA-OKC)
 
-* **Juscelino Rodrigues Brandão**  
-https://github.com/TOKYOSXR
+* *Juscelino Rodrigues Brandão*
+  [https://github.com/TOKYOSXR](https://github.com/TOKYOSXR)
