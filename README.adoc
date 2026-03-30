@@ -30,17 +30,13 @@ Tradicionalmente, a validação de fluxos no SAP exige alto esforço manual, tan
 * Alto risco de erro humano
 * Maior tempo operacional para validação dos fluxos
 
-O ciclo completo de testes podia levar cerca de:
-
-*6 semanas*
+O ciclo completo de testes levava *semanas* para ser concluído.
 
 *Com a automação*
 
 O sistema executa os cenários automaticamente, registra evidências e reduz a dependência de atividades repetitivas e manuais.
 
-O tempo foi reduzido para aproximadamente:
-
-*até 2 dias*
+Hoje, a execução pode ser concluída em *alguns dias*, com muito mais consistência e rastreabilidade.
 
 *Resultado*
 
@@ -122,15 +118,9 @@ Esse ajuste foi implementado conforme necessidade do processo e mantém o fluxo 
 
 No fluxo *CO01*, a data de início passou a utilizar sempre a data atual do sistema, evitando manutenção manual do campo.
 
-No fluxo *CO02* de modificação de datas, foi implementada a lógica:
+No fluxo *CO02* de modificação de datas, o sistema preenche apenas a nova data de início e deixa que o próprio SAP calcule automaticamente a data final após a confirmação.
 
-* Data de início = data atual + 1 dia
-* Data de fim = data atual + 3 dias
-
-Exemplo:
-
-* Se hoje for dia 26, a data de início será 27
-* A data de fim será 30
+Além disso, foi considerado o comportamento do calendário de fábrica. Como o SAP pode bloquear datas que caiam em sábado ou domingo, o sistema evita esse tipo de inconsistência e conduz o preenchimento de forma que o próprio SAP faça o cálculo da data final de maneira limpa e compatível com a regra de calendário.
 
 ==== Tratamento inteligente de operações na CO11N
 
@@ -142,12 +132,6 @@ Como uma ordem pode possuir múltiplas operações, o sistema passou a:
 * executar o fluxo uma operação por vez
 
 Com isso, evita-se execução com operação em branco, fictícia ou incompleta, aumentando a confiabilidade do cenário.
-
-==== Execução otimizada em ações de menu
-
-Em alguns cenários, como no encerramento técnico (*TECO*), o sistema realiza a instrução diretamente no SAP sem depender da renderização visual completa do menu na tela.
-
-Na prática, a execução ocorre de forma mais rápida, com atualização direta do status final.
 
 ---
 
@@ -214,22 +198,6 @@ Essa frente ainda está em desenvolvimento, mas já representa um avanço import
 
 ---
 
-=== 🏗️ Arquitetura e Direcionamento Técnico
-
-A evolução da solução está orientada para uma arquitetura mais modular e expansível.
-
-Entre os principais direcionamentos técnicos estão:
-
-* núcleo desacoplado de regras específicas de módulo
-* tratamento mais robusto de pop-ups dinâmicos
-* suporte a loops condicionais em fluxos complexos
-* reaproveitamento de contexto entre transações
-* melhoria contínua do uso de IA em cenários de falha
-
-Esse direcionamento permite que a solução cresça com menor custo técnico e maior capacidade de absorver novas transações SAP no futuro.
-
----
-
 === ✅ Benefícios da Evolução
 
 Com as melhorias implementadas e em desenvolvimento, a solução entrega:
@@ -273,17 +241,13 @@ Traditionally, validating SAP process flows requires significant manual effort f
 * High risk of human error
 * Longer operational time for validation
 
-A complete testing cycle could take around:
-
-*6 weeks*
+A complete testing cycle used to take *weeks* to be completed.
 
 *With automation*
 
 The system executes scenarios automatically, records evidence and reduces dependency on repetitive manual activities.
 
-Execution time was reduced to approximately:
-
-*up to 2 days*
+Today, execution can be completed in *a few days*, with much more consistency and traceability.
 
 *Result*
 
@@ -365,15 +329,9 @@ This was implemented to meet a process requirement while keeping the flow fully 
 
 In *CO01*, the start date now always uses the current system date, avoiding manual maintenance.
 
-In *CO02* date changes, the following logic was implemented:
+In *CO02* date changes, the system fills only the new start date and lets SAP automatically calculate the end date after confirmation.
 
-* Start date = current date + 1 day
-* End date = current date + 3 days
-
-Example:
-
-* If today is the 26th, the start date becomes the 27th
-* The end date becomes the 30th
+In addition, factory calendar behavior was taken into account. Since SAP may block dates that fall on Saturdays or Sundays, the system avoids this type of inconsistency and guides the input so SAP can calculate the final date cleanly and according to calendar rules.
 
 ==== Intelligent operation handling in CO11N
 
@@ -385,12 +343,6 @@ Since an order may contain multiple operations, the system now:
 * executes the flow one operation at a time
 
 This avoids blank, fictitious or incomplete operations and increases execution reliability.
-
-==== Optimized execution in menu actions
-
-In some scenarios, such as technical completion (*TECO*), the system sends the instruction directly within SAP without depending on the full visual rendering of the dropdown menu on screen.
-
-In practice, this makes execution faster and applies the final status more directly.
 
 ---
 
@@ -454,22 +406,6 @@ In an initial working case, the system can infer that the value *31* is the best
 * improve AI confidence handling
 
 This capability is still in an early stage, but it already represents an important step toward a more resilient, adaptive and intelligent automation platform.
-
----
-
-=== 🏗️ Architecture and Technical Direction
-
-The solution is evolving toward a more modular and extensible architecture.
-
-Key technical directions include:
-
-* core structure decoupled from module-specific rules
-* stronger handling of dynamic pop-ups
-* support for conditional loops in complex flows
-* reuse of context between transactions
-* continuous improvement of AI-assisted failure handling
-
-This direction allows the solution to grow with lower technical cost and better capacity to absorb new SAP transactions in the future.
 
 ---
 
