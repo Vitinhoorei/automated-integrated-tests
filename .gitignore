@@ -75,6 +75,3 @@ pip-wheel-metadata/
 # If you generate test result files
 results/
 reports/
-
-# IA / Banco de Erros (Cache Local de Self-Healing)
-data/error_base.json

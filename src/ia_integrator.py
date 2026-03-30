@@ -89,17 +89,69 @@ class AITestIntegrator:
                 self.shared_context[data["entidade"]] = str(data["id"])
         except Exception:
             pass
+    
+    def _buscar_regra_local(self, tcode, status_message, params):
+        """Olha o error_base.json para ver se temos uma regra manual de auto-cura."""
+        if not status_message:
+            return None
+            
+        msg_lower = status_message.lower()
+        tcode_upper = tcode.upper().strip()
+        erro_generico = "obrigatório" in msg_lower or "mandatory" in msg_lower
+        
+        for erro_mapeado, regra in self.repo.errors.items():
+            if len(erro_mapeado) == 32 and not " " in erro_mapeado:
+                continue 
+
+            tcodes_permitidos = regra.get("tcodes", [])
+            if tcodes_permitidos and tcode_upper not in tcodes_permitidos:
+                continue
+
+            campo = regra.get("campo_sugerido", "")
+            campo_vazio_na_planilha = campo in params and str(params[campo]).strip() == ""
+            
+            if erro_mapeado.lower() in msg_lower or (erro_generico and campo_vazio_na_planilha):
+                valor = regra.get("valor_padrao", "")
+                regra_dinamica = regra.get("usar_regra_dinamica")
+                
+                if regra_dinamica == "TIPO_ORDEM_X_ATIVIDADE":
+                    tipo_ordem = params.get("Tipo de ordem", params.get("Tipo de nota", "")).upper()
+                    
+                    try:
+                        with open("sap_codes.yaml", "r", encoding="utf-8") as f:
+                            sap_codes = yaml.safe_load(f)
+                        
+                        regras_atividade = sap_codes.get("REGRAS_DE_CONTEXTO", {}).get("TIPO_ORDEM_X_ATIVIDADE", {})
+                        
+                        if tipo_ordem in regras_atividade:
+                            valor = regras_atividade[tipo_ordem]["valores_validos"][0]["codigo"]
+                    except Exception:
+                        pass 
+                
+                if campo and valor:
+                    return {
+                        "causa_raiz": f"Erro mapeado na tela ou campo obrigatório vazio: '{campo}'",
+                        "sugestao_correcao": f"Preencher '{campo}' com '{valor}'",
+                        "parametro_sugerido": f"{campo}={valor}",
+                        "confianca": 100,
+                        "justificativa": regra.get("justificativa", "Auto-Cura local via Regras YAML/JSON.")
+                    }
+        return None
 
     def analisar_erro_sap(self, tcode, status_message, dump_path=None, params=None):
+        regra_local = self._buscar_regra_local(tcode, status_message, params or {})
+        if regra_local:
+            return regra_local
+
         normalized = self._normalize_error(tcode, status_message, params)
         saved = self.repo.get(normalized)
-        if saved:
+        if saved and isinstance(saved, dict) and "causa_raiz" in saved:
             return {
                 "causa_raiz": saved["causa_raiz"],
                 "sugestao_correcao": saved["sugestao_correcao"],
                 "parametro_sugerido": saved.get("parametro_sugerido"),
                 "confianca": saved.get("confianca", 80),
-                "justificativa": "Erro conhecido na base."
+                "justificativa": "Erro conhecido no cache da IA."
             }
 
         contexto_conhecimento = self.rules_provider.obter_contexto_relevante(params or {})
@@ -111,7 +163,8 @@ class AITestIntegrator:
                 field_map = yaml.safe_load(f)
             if tcode in field_map:
                 for screen in field_map[tcode]:
-                    campos_disponiveis.extend(field_map[tcode][screen].keys())
+                    if isinstance(field_map[tcode][screen], dict):
+                        campos_disponiveis.extend(field_map[tcode][screen].keys())
         except Exception:
             pass
 
@@ -130,19 +183,16 @@ class AITestIntegrator:
                     {campos_disponiveis}
 
                     INSTRUÇÕES:
-                    1. Identifique qual campo está vazio ("") nos 'Valores Enviados'.
-                    2. Se for 'TipoAtvMnt', escolha um CÓDIGO NUMÉRICO na 'Base de Conhecimento' para o tipo de ordem do teste com base naquele teste que esta sendo executado.
-                    3. Se for 'Prioridade' e já tiver valor (ex: 2), NÃO ALTERE.
-                    4. IMPORTANTE: O nome do campo no retorno deve ser EXATAMENTE igual a um dos nomes da lista 'CAMPOS QUE O ROBÔ RECONHECE NA TELA'.
-                    5. Se na planilha está 'TipoAtvMnt' e na tela está 'Tipo de atividade de manutenção', use o nome da tela.
-                    6. Responda apenas o código técnico. Ex: Tipo de atividade de manutenção=26.
+                    1. Identifique qual campo está vazio ou incorreto.
+                    2. Retorne APENAS um JSON válido.
+                    3. No campo 'parametro_sugerido', forneça o NOME DO CAMPO e o VALOR REAL CORRETO. Não use placeholders ou textos genéricos.
 
                     Retorne APENAS JSON:
                     {{
                     "causa_raiz": "O campo X estava vazio",
                     "sugestao_correcao": "Preencher com código Y",
-                    "parametro_sugerido": "NOME_DO_CAMPO_DA_TELA=CODIGO_ESCOLHIDO",
-                    "confianca": 100
+                    "parametro_sugerido": "NOME_DO_CAMPO=VALOR_REAL",
+                    "confianca": 90
                     }}
                 """
 
@@ -159,10 +209,10 @@ class AITestIntegrator:
             "confianca": data.get("confianca", 50),
             "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
         }
+        
         self.repo.save(normalized, result)
 
         return result
-
     def aplicar_correcao_parametros(self, params, parametro_sugerido):
         if not parametro_sugerido:
             return params

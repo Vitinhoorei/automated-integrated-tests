@@ -1,1 +1,106 @@
-{}
+{
+  "tipo de atividade de manutenção": {
+    "tcodes": [
+      "IW31",
+      "IW34",
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Tipo de atividade de manutenção",
+    "usar_regra_dinamica": "TIPO_ORDEM_X_ATIVIDADE",
+    "valor_padrao": "31",
+    "justificativa": "Campo obrigatório. Valor via regra dinâmica."
+  },
+  "prioridade": {
+    "tcodes": [
+      "IW31",
+      "IW34",
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Prioridade",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "2",
+    "justificativa": "Prioridade não informada. Assumido '2' (Média)."
+  },
+  "utilização": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Utilização",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "4",
+    "justificativa": "Padrão fixo para planos de manutenção."
+  },
+  "grupo de planejamento": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Grupo de planejamento",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "MUT",
+    "justificativa": "Padrão fixo (MUT) para planos."
+  },
+  "status do plano": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Status do plano",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "4",
+    "justificativa": "Padrão fixo para planos."
+  },
+  "unidade trabalho": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Unidade trabalho",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "H",
+    "justificativa": "Padrão fixo (Horas)."
+  },
+  "unidade duração": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Unidade duração",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "H",
+    "justificativa": "Padrão fixo (Horas)."
+  },
+  "unidade de medida": {
+    "tcodes": [
+      "CO07"
+    ],
+    "campo_sugerido": "Unidade de medida",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "UM",
+    "justificativa": "Padrão fixo para ordens de PP."
+  },
+  "fed2707bafd08e104f794b367de47987": {
+    "causa_raiz": "O campo 'Prioridade da Nota' estava vazio",
+    "sugestao_correcao": "Preencher com um valor válido para 'Prioridade da Nota'",
+    "parametro_sugerido": "Prioridade da Nota=2",
+    "confianca": 90,
+    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
+  },
+  "e51f23bff54df48b03d7eed1539ee51f": {
+    "causa_raiz": "O campo 'Grupo de planejamento' estava vazio",
+    "sugestao_correcao": "Preencher com um valor válido para o campo 'Grupo de planejamento'",
+    "parametro_sugerido": "Grupo de planejamento=PL01",
+    "confianca": 90,
+    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
+  },
+  "37e9b575947ffb8a71605f8c0b903eb1": {
+    "causa_raiz": "O campo 'Descrição da operação' na tabela não foi reconhecido ou está incorreto",
+    "sugestao_correcao": "Verificar e corrigir o valor enviado para 'Descrição da operação'.",
+    "parametro_sugerido": "Descrição da operação=Teste",
+    "confianca": 90,
+    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
+  }
+}
