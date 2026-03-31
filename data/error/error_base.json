@@ -12,18 +12,18 @@
     "justificativa": "Campo obrigatório. Valor via regra dinâmica."
   },
   "prioridade da nota": {
-    "tcodes": ["IW21", "IW31", "IW34"],
+    "tcodes": ["IW31", "IW34"], 
     "campo_sugerido": "Prioridade da Nota",
     "usar_regra_dinamica": null,
     "valor_padrao": "2",
     "justificativa": "Prioridade da Nota não informada. Assumido '2'."
   },
   "prioridade": {
-    "tcodes": ["IW31", "IW34", "IP41", "IP42"],
+    "tcodes": ["IW21", "IW31", "IW34", "IP41", "IP42"],
     "campo_sugerido": "Prioridade",
     "usar_regra_dinamica": null,
     "valor_padrao": "2",
-    "justificativa": "Prioridade da Ordem não informada. Assumido '2'."
+    "justificativa": "Prioridade da Ordem/Nota principal não informada. Assumido '2'."
   },
   "utilização": {
     "tcodes": [

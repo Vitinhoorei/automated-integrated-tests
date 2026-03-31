@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import json
 import time
 import unicodedata
 import re
@@ -859,7 +860,26 @@ class SapAutomation:
                     time.sleep(1.0)
                 except Exception as e:
                     raise Exception(f"Erro ao atribuir Pacotes de Manutenção (PactsMt) na IP42: {e}")
+            
+            try:
+                with open("data/error/error_base.json", "r", encoding="utf-8") as f_erros:
+                    regras_locais = json.load(f_erros)
+            except Exception:
+                regras_locais = {}
 
+            for erro_nome, regra in regras_locais.items():
+                if len(erro_nome) == 32: continue 
+
+                tcodes_permitidos = regra.get("tcodes", [])
+                if tcode_u in tcodes_permitidos:
+                    campo = regra.get("campo_sugerido")
+                    
+                    if campo:
+                        campo_vazio = campo not in parameters or str(parameters.get(campo, "")).strip() == ""
+                        if campo_vazio:
+                            ev = self._capture_error_evidence(evidence_path, "BUSINESS_RULE")
+                            return SapResult("FAIL", "STATUSBAR", f"Falta preencher o campo '{campo}'", ev)
+                        
             ev = self._capture_success_evidence(evidence_path)
 
             if not is_real_mode:

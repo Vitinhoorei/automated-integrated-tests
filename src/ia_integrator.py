@@ -91,51 +91,80 @@ class AITestIntegrator:
             pass
     
     def _buscar_regra_local(self, tcode, status_message, params):
-        """Olha o error_base.json para ver se temos uma regra manual de auto-cura."""
-        if not status_message:
-            return None
+        if not status_message: return None
             
         msg_lower = status_message.lower()
         tcode_upper = tcode.upper().strip()
         erro_generico = "obrigatório" in msg_lower or "mandatory" in msg_lower
         
         for erro_mapeado, regra in self.repo.errors.items():
-            if len(erro_mapeado) == 32 and not " " in erro_mapeado:
-                continue 
+            if len(erro_mapeado) == 32: continue 
 
             tcodes_permitidos = regra.get("tcodes", [])
-            if tcodes_permitidos and tcode_upper not in tcodes_permitidos:
-                continue
+            if tcodes_permitidos and tcode_upper not in tcodes_permitidos: continue
 
             campo = regra.get("campo_sugerido", "")
-            campo_vazio_na_planilha = campo not in params or str(params.get(campo, "")).strip() == ""
+            mensagem_especifica = f"'{campo.lower()}'" in msg_lower
             
-            if erro_mapeado.lower() in msg_lower or (erro_generico and campo_vazio_na_planilha):
+            if campo.lower() == "prioridade" and "prioridade da nota" in msg_lower:
+                continue 
+
+            if erro_mapeado.lower() in msg_lower or mensagem_especifica:
                 valor = regra.get("valor_padrao", "")
                 regra_dinamica = regra.get("usar_regra_dinamica")
                 
                 if regra_dinamica == "TIPO_ORDEM_X_ATIVIDADE":
                     tipo_ordem = params.get("Tipo de ordem", params.get("Tipo de nota", "")).upper()
-                    
                     try:
                         with open("sap_codes.yaml", "r", encoding="utf-8") as f:
                             sap_codes = yaml.safe_load(f)
-                        
                         regras_atividade = sap_codes.get("REGRAS_DE_CONTEXTO", {}).get("TIPO_ORDEM_X_ATIVIDADE", {})
-                        
                         if tipo_ordem in regras_atividade:
                             valor = regras_atividade[tipo_ordem]["valores_validos"][0]["codigo"]
-                    except Exception:
-                        pass 
+                    except Exception: pass 
                 
                 if campo and valor:
                     return {
-                        "causa_raiz": f"Erro mapeado na tela ou campo obrigatório vazio: '{campo}'",
+                        "causa_raiz": f"Erro específico identificado: '{campo}'",
                         "sugestao_correcao": f"Preencher '{campo}' com '{valor}'",
                         "parametro_sugerido": f"{campo}={valor}",
                         "confianca": 100,
                         "justificativa": regra.get("justificativa", "Auto-Cura local via Regras YAML/JSON.")
                     }
+
+        if erro_generico:
+            for erro_mapeado, regra in self.repo.errors.items():
+                if len(erro_mapeado) == 32: continue 
+
+                tcodes_permitidos = regra.get("tcodes", [])
+                if tcodes_permitidos and tcode_upper not in tcodes_permitidos: continue
+
+                campo = regra.get("campo_sugerido", "")
+                campo_vazio_na_planilha = campo not in params or str(params.get(campo, "")).strip() == ""
+                
+                if campo_vazio_na_planilha:
+                    valor = regra.get("valor_padrao", "")
+                    regra_dinamica = regra.get("usar_regra_dinamica")
+                    
+                    if regra_dinamica == "TIPO_ORDEM_X_ATIVIDADE":
+                        tipo_ordem = params.get("Tipo de ordem", params.get("Tipo de nota", "")).upper()
+                        try:
+                            with open("sap_codes.yaml", "r", encoding="utf-8") as f:
+                                sap_codes = yaml.safe_load(f)
+                            regras_atividade = sap_codes.get("REGRAS_DE_CONTEXTO", {}).get("TIPO_ORDEM_X_ATIVIDADE", {})
+                            if tipo_ordem in regras_atividade:
+                                valor = regras_atividade[tipo_ordem]["valores_validos"][0]["codigo"]
+                        except Exception: pass 
+                    
+                    if campo and valor:
+                        return {
+                            "causa_raiz": "Erro genérico mapeado para campo faltante",
+                            "sugestao_correcao": f"Preencher '{campo}' com '{valor}'",
+                            "parametro_sugerido": f"{campo}={valor}",
+                            "confianca": 100,
+                            "justificativa": regra.get("justificativa", "Auto-Cura local genérica.")
+                        }
+
         return None
 
     def analisar_erro_sap(self, tcode, status_message, dump_path=None, params=None):
