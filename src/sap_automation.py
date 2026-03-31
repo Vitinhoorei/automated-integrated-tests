@@ -525,9 +525,6 @@ class SapAutomation:
 
             table_id = "wnd[0]/usr/tblSAPLCORUTC_3100"
             
-            # ==========================================================
-            # CENÁRIO 1: ACESSO DIRETO (APENAS 1 OPERAÇÃO)
-            # ==========================================================
             if not self._table_exists(table_id):
                 try:
                     self.session.findById("wnd[0]/usr/ctxtAFRUD-PERNR") 
@@ -551,7 +548,6 @@ class SapAutomation:
 
                     self._safe_press_save(mode=mode)
                     
-                    # --- BLINDAGEM DA TELA DE LOG E CAPTURA DE MENSAGEM EXATA ---
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text() or ""
                     titulo_tela = ""
@@ -613,7 +609,6 @@ class SapAutomation:
                         except: pass
                         
                         return SapResult("FAIL", "STATUSBAR", msg_erro, ev)
-                    # ------------------------------------------------------------
                     
                     ev = self._capture_success_evidence(evidence_path)
                     modo_txt = "REAL" if is_real_mode else "SIMULADO"
@@ -622,9 +617,6 @@ class SapAutomation:
                 except Exception:
                     return SapResult("FAIL", "NOT_FOUND", "Tabela não encontrada e acesso direto falhou na IW41.", self._capture_error_evidence(evidence_path, "TABLE_MISSING"))
 
-            # ==========================================================
-            # CENÁRIO 2: MÚLTIPLAS OPERAÇÕES (TABELA)
-            # ==========================================================
             table = self.session.findById(table_id)
             max_rows = int(getattr(table, "RowCount", 50))
             processed = 0
@@ -682,7 +674,6 @@ class SapAutomation:
             if processed > 0:
                 self._safe_press_save(mode=mode)
                 
-                # --- BLINDAGEM DA TELA DE LOG E CAPTURA DE MENSAGEM EXATA ---
                 sb_type = self._statusbar_type()
                 sb = self._statusbar_text() or ""
                 titulo_tela = ""
@@ -744,7 +735,6 @@ class SapAutomation:
                     except: pass
                     
                     return SapResult("FAIL", "STATUSBAR", msg_erro, ev)
-                # ------------------------------------------------------------
                 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
