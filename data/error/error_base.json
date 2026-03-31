@@ -11,17 +11,19 @@
     "valor_padrao": "31",
     "justificativa": "Campo obrigatório. Valor via regra dinâmica."
   },
+  "prioridade da nota": {
+    "tcodes": ["IW21", "IW31", "IW34"],
+    "campo_sugerido": "Prioridade da Nota",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "2",
+    "justificativa": "Prioridade da Nota não informada. Assumido '2'."
+  },
   "prioridade": {
-    "tcodes": [
-      "IW31",
-      "IW34",
-      "IP41",
-      "IP42"
-    ],
+    "tcodes": ["IW31", "IW34", "IP41", "IP42"],
     "campo_sugerido": "Prioridade",
     "usar_regra_dinamica": null,
     "valor_padrao": "2",
-    "justificativa": "Prioridade não informada. Assumido '2' (Média)."
+    "justificativa": "Prioridade da Ordem não informada. Assumido '2'."
   },
   "utilização": {
     "tcodes": [
@@ -81,26 +83,5 @@
     "usar_regra_dinamica": null,
     "valor_padrao": "UM",
     "justificativa": "Padrão fixo para ordens de PP."
-  },
-  "fed2707bafd08e104f794b367de47987": {
-    "causa_raiz": "O campo 'Prioridade da Nota' estava vazio",
-    "sugestao_correcao": "Preencher com um valor válido para 'Prioridade da Nota'",
-    "parametro_sugerido": "Prioridade da Nota=2",
-    "confianca": 90,
-    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
-  },
-  "e51f23bff54df48b03d7eed1539ee51f": {
-    "causa_raiz": "O campo 'Grupo de planejamento' estava vazio",
-    "sugestao_correcao": "Preencher com um valor válido para o campo 'Grupo de planejamento'",
-    "parametro_sugerido": "Grupo de planejamento=PL01",
-    "confianca": 90,
-    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
-  },
-  "37e9b575947ffb8a71605f8c0b903eb1": {
-    "causa_raiz": "O campo 'Descrição da operação' na tabela não foi reconhecido ou está incorreto",
-    "sugestao_correcao": "Verificar e corrigir o valor enviado para 'Descrição da operação'.",
-    "parametro_sugerido": "Descrição da operação=Teste",
-    "confianca": 90,
-    "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
   }
 }

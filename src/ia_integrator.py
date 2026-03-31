@@ -108,7 +108,7 @@ class AITestIntegrator:
                 continue
 
             campo = regra.get("campo_sugerido", "")
-            campo_vazio_na_planilha = campo in params and str(params[campo]).strip() == ""
+            campo_vazio_na_planilha = campo not in params or str(params.get(campo, "")).strip() == ""
             
             if erro_mapeado.lower() in msg_lower or (erro_generico and campo_vazio_na_planilha):
                 valor = regra.get("valor_padrao", "")
@@ -182,17 +182,19 @@ class AITestIntegrator:
                     CAMPOS QUE O ROBÔ RECONHECE NA TELA:
                     {campos_disponiveis}
 
-                    INSTRUÇÕES:
-                    1. Identifique qual campo está vazio ou incorreto.
-                    2. Retorne APENAS um JSON válido.
-                    3. No campo 'parametro_sugerido', forneça o NOME DO CAMPO e o VALOR REAL CORRETO. Não use placeholders ou textos genéricos.
+                    INSTRUÇÕES (SIGA ESTRITAMENTE):
+                    1. Identifique o erro com base APENAS na MENSAGEM SAP.
+                    2. REGRA DE OURO (PROIBIDO ALUCINAR): Se a MENSAGEM SAP indicar que um dado digitado na planilha não existe, é inválido ou não está cadastrado (Ex: "não existente em EQUI", "Centro não cadastrado", "Material inválido"), VOCÊ NÃO PODE ADIVINHAR O VALOR.
+                    3. Nesses casos de dados mestres errados, retorne "parametro_sugerido": "" (string vazia). Apenas explique ao usuário que ele digitou errado na "sugestao_correcao".
+                    4. Só preencha o "parametro_sugerido" (formato NOME=VALOR) se for um erro de campo vazio e você tiver certeza da correção baseada na Base de Conhecimento.
+                    5. Retorne APENAS um JSON válido.
 
-                    Retorne APENAS JSON:
+                    Retorne APENAS JSON neste formato:
                     {{
-                    "causa_raiz": "O campo X estava vazio",
-                    "sugestao_correcao": "Preencher com código Y",
-                    "parametro_sugerido": "NOME_DO_CAMPO=VALOR_REAL",
-                    "confianca": 90
+                    "causa_raiz": "O campo X estava incorreto/vazio.",
+                    "sugestao_correcao": "Verificar se o equipamento digitado existe no SAP.",
+                    "parametro_sugerido": "",
+                    "confianca": 100
                     }}
                 """
 
@@ -210,9 +212,10 @@ class AITestIntegrator:
             "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
         }
         
-        self.repo.save(normalized, result)
-
+        #self.repo.save(normalized, result)
+        
         return result
+    
     def aplicar_correcao_parametros(self, params, parametro_sugerido):
         if not parametro_sugerido:
             return params
