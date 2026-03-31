@@ -66,14 +66,14 @@ Redução superior a *95% no tempo operacional*, além de:
 * *Monitoramento de Erros e Dumps*
   Identificação de falhas técnicas durante a execução, permitindo análise mais rápida dos problemas.
 
-* *Processamento com IA*
-  Uso de Inteligência Artificial para apoio em decisões de fluxo, interpretação de cenários e futura reexecução inteligente de testes com correção assistida.
+* *Processamento com IA e Self-Healing*
+  Uso de Inteligência Artificial e base de regras locais para apoio em decisões de fluxo, interpretação de cenários e reexecução inteligente de testes com correção autônoma.
 
 ---
 
 === 🚀 Evolução da Solução
 
-A solução vem recebendo melhorias voltadas para flexibilidade, robustez e experiência de uso.
+A solução vem recebendo melhorias contínuas voltadas para flexibilidade, robustez e resiliência a falhas operacionais.
 
 ==== Novo modelo de execução de planilhas
 
@@ -106,13 +106,13 @@ Agora o sistema gera automaticamente arquivos com padrão de nomenclatura como:
 
 Isso evita confusão entre arquivo de entrada e resultado processado, além de melhorar a rastreabilidade das execuções.
 
-==== Horário dinâmico no apontamento PM
+==== Horário dinâmico antifalhas no apontamento PM
 
-No apontamento de ordens de manutenção, o horário passou a ser calculado dinamicamente com a lógica:
+No apontamento de ordens de manutenção, a lógica de horário foi refinada para evitar bloqueios do SAP por "sobreposição de horas". O sistema agora calcula dinamicamente uma janela exata e retroativa de 15 minutos baseada na hora atual da execução:
 
-*hora atual - 2 horas*
+*Lógica: Fim = Agora - 2 horas | Início = Fim - 15 minutos*
 
-Esse ajuste foi implementado conforme necessidade do processo e mantém o fluxo automático após o preenchimento.
+Esse ajuste mantém o fluxo automático, limpo e à prova de falhas de concorrência de tempo.
 
 ==== Datas dinâmicas no módulo PP
 
@@ -159,57 +159,34 @@ A solução também passou a suportar fluxos do módulo *PP (Production Planning
 
 ---
 
-=== 🧠 Melhoria em Desenvolvimento: Reexecução Inteligente com IA
+=== 🧠 Sistema de Auto-Cura (Self-Healing) e Validação Inteligente
 
-Uma evolução já iniciada no sistema é a capacidade de *reexecutar testes automaticamente com apoio de IA* quando um erro é identificado por falta ou inconsistência de dados.
+A aplicação possui uma arquitetura madura de *Auto-Cura (Self-Healing) Determinística* e validação de regras de negócio, garantindo que testes não falhem por simples erros operacionais ou campos esquecidos na planilha.
 
-A proposta é que, ao detectar uma falha, o sistema:
+==== Repositório Local de Regras (JSON)
+O sistema conta com um "Cofre de Regras" local que atua como a primeira linha de defesa. O robô intercepta os erros gerados na barra de status do SAP, identifica o campo ausente e injeta a correção instantaneamente (em milissegundos), reexecutando o teste com sucesso.
 
-* identifique a linha da planilha correspondente ao teste
-* analise os dados já preenchidos
-* consulte um mini banco de dados interno com valores possíveis e válidos
-* proponha a melhor correção
-* refaça o teste automaticamente com o novo valor
+==== Cruzamento Dinâmico de Contexto (YAML)
+O robô é capaz de tomar decisões lógicas baseadas no contexto da operação. Ele cruza dados da planilha para preencher o SAP de forma inteligente. Por exemplo: identifica que o "Tipo de Ordem" em execução é `ZCOR` e deduz automaticamente que o "Tipo de Atividade" exigido é `28`.
 
-==== Caso inicial implementado
+==== Fiscal de Obrigatoriedade Interno
+O sistema tornou-se mais rigoroso que o próprio SAP. Campos vitais para o negócio (como *Prioridade* ou *Grupo de Planejamento*), que por vezes o SAP permite salvar em branco, agora disparam uma validação interna no script. Se o analista esquecer de preencher, o robô força a Auto-Cura a atuar, garantindo a padronização e integridade dos dados mestres.
 
-O primeiro cenário iniciado para essa inteligência é o campo *TipoAtvMnt* (*Tipo de Atividade de Manutenção*).
-
-Se o usuário deixar esse campo em branco na planilha e o teste falhar por esse motivo, a IA avalia o contexto do cenário e consulta o mini banco de dados interno para identificar o valor mais adequado.
-
-Em um caso já iniciado, o sistema consegue inferir que o valor *31* é o mais adequado para aquele teste e reexecuta o fluxo com esse preenchimento.
-
-==== Status atual
-
-* Estrutura inicial criada
-* Primeira regra funcional implementada
-* Reexecução automática em cenário inicial disponível
-* Arquitetura em evolução para suportar novos campos e regras
-
-==== Próximos passos previstos
-
-* expansão para outros campos obrigatórios
-* evolução do mini banco de dados interno
-* estudo de integração com API ou base de dados SAP, se aplicável
-* registro de decisões automáticas em log
-* amadurecimento do mecanismo de confiança da IA
-
-Essa frente ainda está em desenvolvimento, mas já representa um avanço importante rumo a uma automação mais resiliente, adaptativa e inteligente.
+==== Inteligência Artificial como Fallback
+A IA em nuvem (LLM) atua agora estritamente como um *Plano B* para cenários desconhecidos. Caso o erro do SAP não esteja mapeado nas regras determinísticas locais, a IA entra em ação para analisar a tela, os campos disponíveis e propor uma correção, reduzindo drasticamente o consumo de tokens e eliminando "alucinações" em processos do dia a dia.
 
 ---
 
 === ✅ Benefícios da Evolução
 
-Com as melhorias implementadas e em desenvolvimento, a solução entrega:
+Com as melhorias implementadas e a arquitetura de Auto-Cura, a solução entrega:
 
-* redução de esforço manual
-* maior confiabilidade dos testes
-* melhor organização dos resultados
+* redução drástica de esforço manual
+* resiliência autônoma contra erros de preenchimento
+* maior confiabilidade e padronização dos testes (campos vitais garantidos)
+* melhor organização e rastreabilidade dos resultados
 * reaproveitamento do núcleo para novos módulos
-* maior facilidade de manutenção
-* execução mais rápida e inteligente
-* melhor experiência para o usuário operador
-* maior controle e rastreabilidade do processo
+* execução inteligente e em milissegundos
 
 ---
 
@@ -277,21 +254,21 @@ More than *95% reduction in operational time*, along with:
 * *Error and Dump Monitoring*
   Identifies technical failures during execution, enabling faster troubleshooting.
 
-* *AI-Assisted Processing*
-  Uses Artificial Intelligence to support flow decisions, scenario interpretation and future intelligent retry capabilities with assisted correction.
+* *AI-Assisted Processing & Self-Healing*
+  Uses Artificial Intelligence and local rule bases to support flow decisions, scenario interpretation and intelligent retry capabilities with autonomous correction.
 
 ---
 
 === 🚀 Solution Evolution
 
-The solution has been receiving improvements focused on flexibility, robustness and usability.
+The solution has been receiving continuous improvements focused on flexibility, robustness and resilience to operational failures.
 
 ==== New spreadsheet execution model
 
 The system now supports two execution modes:
 
 * *Simulation Mode*
-  Allows validation of the flow without actually executing it in SAP, avoiding the need to remove transactions from the spreadsheet just to perform tests.
+  Allows validation of the flow and testing of the self-healing engine without actually saving data in SAP, avoiding the need to remove transactions from the spreadsheet just to perform tests.
 
 * *Execution Mode*
   Runs the full process in SAP.
@@ -317,13 +294,13 @@ Instead, the system automatically creates result files using names such as:
 
 This improves traceability and avoids confusion between source and output files.
 
-==== Dynamic time handling in PM confirmation
+==== Dynamic fail-proof time handling in PM confirmation
 
-For maintenance order time confirmation, the system now applies the following logic dynamically:
+For maintenance order time confirmation, the time logic was refined to prevent SAP blockages due to "time overlap". The system now dynamically calculates an exact, retroactive 15-minute window based on the current execution time:
 
-*current time - 2 hours*
+*Logic: End = Now - 2 hours | Start = End - 15 minutes*
 
-This was implemented to meet a process requirement while keeping the flow fully automated.
+This keeps the flow fully automated, clean, and concurrency-proof.
 
 ==== Dynamic dates in PP
 
@@ -370,57 +347,34 @@ The solution also supports *PP (Production Planning)* flows, including:
 
 ---
 
-=== 🧠 Improvement in Progress: Intelligent Retry with AI
+=== 🧠 Deterministic Self-Healing and Smart Validation
 
-One enhancement already started is the ability to *automatically retry failed tests with AI assistance* whenever an error occurs due to missing or inconsistent data.
+The application features a mature *Deterministic Self-Healing* architecture and business rule validation, ensuring that tests do not fail due to simple operational errors or forgotten spreadsheet fields.
 
-The idea is that, when a failure is detected, the system will:
+==== Local Rule Repository (JSON)
+The system has a local "Rule Vault" acting as the first line of defense. The bot intercepts errors generated in the SAP status bar, identifies the missing field, and injects the correction instantly (in milliseconds), re-executing the test successfully.
 
-* identify the spreadsheet row related to the failed test
-* analyze the data already provided
-* consult an internal mini database with valid and possible values
-* determine the best correction
-* automatically rerun the test with the corrected value
+==== Dynamic Context Cross-referencing (YAML)
+The bot can make logical decisions based on the operation's context. It cross-references spreadsheet data to intelligently fill SAP fields. For example, it identifies that the running "Order Type" is `ZCOR` and automatically deduces that the required "Activity Type" is `28`.
 
-==== Initial implemented case
+==== Internal Mandatory Field Inspector
+The system has become stricter than SAP itself. Vital business fields (such as *Priority* or *Planner Group*) that SAP sometimes allows to be saved blank now trigger an internal validation script. If the analyst forgets to fill them, the bot forces Auto-Healing to intervene, ensuring standardization and master data integrity.
 
-The first scenario under development for this capability is the *TipoAtvMnt* field (*Maintenance Activity Type*).
-
-If the user leaves this field blank in the spreadsheet and the test fails because of that, the AI analyzes the test context and checks the internal mini database to determine the most appropriate value.
-
-In an initial working case, the system can infer that the value *31* is the best fit for that scenario and rerun the flow using that value.
-
-==== Current status
-
-* Initial structure created
-* First functional rule implemented
-* Automatic retry available in an initial scenario
-* Architecture evolving to support new fields and rules
-
-==== Planned next steps
-
-* extend support to additional mandatory fields
-* evolve the internal mini database
-* evaluate integration with SAP APIs or SAP data sources, when applicable
-* log automatic decisions
-* improve AI confidence handling
-
-This capability is still in an early stage, but it already represents an important step toward a more resilient, adaptive and intelligent automation platform.
+==== AI as a Fallback
+Cloud Artificial Intelligence (LLM) now acts strictly as a *Plan B* for unknown scenarios. If the SAP error is not mapped in the local deterministic rules, the AI kicks in to analyze the screen and available fields to propose a correction, drastically reducing token consumption and eliminating "hallucinations" in everyday processes.
 
 ---
 
 === ✅ Evolution Benefits
 
-With the implemented and planned improvements, the solution delivers:
+With the implemented improvements and the Self-Healing architecture, the solution delivers:
 
-* reduced manual effort
-* higher test reliability
-* better organization of results
-* reuse of the same core for new modules
-* easier maintenance
-* faster and smarter execution
-* better operator experience
-* stronger control and traceability
+* drastically reduced manual effort
+* autonomous resilience against input errors
+* higher reliability and standardized tests (vital fields guaranteed)
+* better organization and traceability of results
+* core reuse for new modules
+* smarter and lightning-fast execution
 
 ---
 
