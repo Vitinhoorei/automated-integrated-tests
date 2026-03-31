@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import json
 import time
 import unicodedata
 import re
@@ -819,6 +820,14 @@ class SapAutomation:
             safe_set_text("Grupo de planejamento")
             safe_set_text("Status do plano")
 
+            self.session.findById("wnd[0]").sendVKey(0) 
+            time.sleep(0.8)
+
+            sb_type = self._statusbar_type()
+            if sb_type in {"E", "A", "X"}:
+                msg_erro = self._statusbar_text()
+                raise Exception(msg_erro or "Erro obrigatório ao preencher cabeçalho do plano.")
+
             try:
                 self.session.findById("wnd[0]/tbar[1]/btn[16]").press()
             except Exception:
@@ -852,7 +861,26 @@ class SapAutomation:
                     time.sleep(1.0)
                 except Exception as e:
                     raise Exception(f"Erro ao atribuir Pacotes de Manutenção (PactsMt) na IP42: {e}")
+            
+            try:
+                with open("data/error/error_base.json", "r", encoding="utf-8") as f_erros:
+                    regras_locais = json.load(f_erros)
+            except Exception:
+                regras_locais = {}
 
+            for erro_nome, regra in regras_locais.items():
+                if len(erro_nome) == 32: continue 
+
+                tcodes_permitidos = regra.get("tcodes", [])
+                if tcode_u in tcodes_permitidos:
+                    campo = regra.get("campo_sugerido")
+                    
+                    if campo:
+                        campo_vazio = campo not in parameters or str(parameters.get(campo, "")).strip() == ""
+                        if campo_vazio:
+                            ev = self._capture_error_evidence(evidence_path, "BUSINESS_RULE")
+                            return SapResult("FAIL", "STATUSBAR", f"Falta preencher o campo '{campo}'", ev)
+                        
             ev = self._capture_success_evidence(evidence_path)
 
             if not is_real_mode:
@@ -1001,7 +1029,7 @@ class SapAutomation:
                     self._dismiss_popup("NO")
                     time.sleep(1.0)
                 
-                self.session.findById("wnd[0]/tbar[0]/btn[11]").press() 
+                self.session.findById("wnd[0]/tbar[0]/btn[11]").press()
                 time.sleep(1.0)
                 
                 sb = self._statusbar_text()
@@ -1354,7 +1382,7 @@ class SapAutomation:
         sb = self._statusbar_text()
         sb_type = self._statusbar_type()
         
-        if is_real and sb_type in {"E", "A", "X"}:
+        if sb_type in {"E", "A", "X"}:
             ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
             return SapResult("FAIL", "STATUSBAR", sb or "Erro ao salvar no SAP", ev)
 
@@ -1504,9 +1532,22 @@ class SapAutomation:
                     msg = f"Campos obrigatórios mapeados no YAML não encontrados no SAP: {reais_faltantes}"
                     ev = self._capture_error_evidence(evidence_path, "UNMAPPED_PARAM")
                     return SapResult("FAIL", "UNMAPPED_PARAM", msg, ev)
+            
+            if tcode_u in ["IW31", "IW34"]:
+                prioridade_vazia = "Prioridade" not in parameters or str(parameters.get("Prioridade", "")).strip() == ""
+                
+                if prioridade_vazia:
+                    ev = self._capture_error_evidence(evidence_path, "BUSINESS_RULE")
+                    return SapResult("FAIL", "STATUSBAR", "Campo 'Prioridade' é obrigatório para o sistema", ev)
                 
             self.execute_default()
             time.sleep(1.5)
+
+            sb_type = self._statusbar_type()
+            if sb_type in {"E", "A", "X"}:
+                sb = self._statusbar_text()
+                ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
+                return SapResult("FAIL", "STATUSBAR", sb or f"Erro SAP na transação {tcode_u}", ev)
 
             if is_iw32_print_flow and tcode_u == "IW32":
                 try:

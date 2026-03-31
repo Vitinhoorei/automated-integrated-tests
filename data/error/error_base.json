@@ -1,1 +1,87 @@
-{}
+{
+  "tipo de atividade de manutenção": {
+    "tcodes": [
+      "IW31",
+      "IW34",
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Tipo de atividade de manutenção",
+    "usar_regra_dinamica": "TIPO_ORDEM_X_ATIVIDADE",
+    "valor_padrao": "31",
+    "justificativa": "Campo obrigatório. Valor via regra dinâmica."
+  },
+  "prioridade da nota": {
+    "tcodes": ["IW31", "IW34"], 
+    "campo_sugerido": "Prioridade da Nota",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "2",
+    "justificativa": "Prioridade da Nota não informada. Assumido '2'."
+  },
+  "prioridade": {
+    "tcodes": ["IW21", "IW31", "IW34", "IP41", "IP42"],
+    "campo_sugerido": "Prioridade",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "2",
+    "justificativa": "Prioridade da Ordem/Nota principal não informada. Assumido '2'."
+  },
+  "utilização": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Utilização",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "4",
+    "justificativa": "Padrão fixo para planos de manutenção."
+  },
+  "grupo de planejamento": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Grupo de planejamento",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "MUT",
+    "justificativa": "Padrão fixo (MUT) para planos."
+  },
+  "status do plano": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Status do plano",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "4",
+    "justificativa": "Padrão fixo para planos."
+  },
+  "unidade trabalho": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Unidade trabalho",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "H",
+    "justificativa": "Padrão fixo (Horas)."
+  },
+  "unidade duração": {
+    "tcodes": [
+      "IP41",
+      "IP42"
+    ],
+    "campo_sugerido": "Unidade duração",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "H",
+    "justificativa": "Padrão fixo (Horas)."
+  },
+  "unidade de medida": {
+    "tcodes": [
+      "CO07"
+    ],
+    "campo_sugerido": "Unidade de medida",
+    "usar_regra_dinamica": null,
+    "valor_padrao": "UM",
+    "justificativa": "Padrão fixo para ordens de PP."
+  }
+}
