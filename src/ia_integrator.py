@@ -169,6 +169,16 @@ class AITestIntegrator:
 
     def analisar_erro_sap(self, tcode, status_message, dump_path=None, params=None):
         regra_local = self._buscar_regra_local(tcode, status_message, params or {})
+
+        if status_message and ("HHMANU" in status_message or "preço" in status_message.lower()):
+            return {
+                "causa_raiz": status_message,  # <--- AQUI VAI O TEXTO CRU E EXATO!
+                "sugestao_correcao": "Verificar a carga de tarifas na transação KP26 neste ambiente.",
+                "parametro_sugerido": "",
+                "confianca": 100,
+                "justificativa": "Mensagem exata capturada diretamente da tela de Log (ALV Grid)."
+            }
+        
         if regra_local:
             return regra_local
 
@@ -240,9 +250,7 @@ class AITestIntegrator:
             "confianca": data.get("confianca", 50),
             "justificativa": "Análise IA orientada por Base de Conhecimento e Mapeamento de Tela"
         }
-        
-        #self.repo.save(normalized, result)
-        
+                
         return result
     
     def aplicar_correcao_parametros(self, params, parametro_sugerido):
