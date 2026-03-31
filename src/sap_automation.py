@@ -511,11 +511,12 @@ class SapAutomation:
             pernr = self._get_param_value(parameters, "Nº pessoal", "N* pessoal", "N pessoal", "Numero pessoal")
 
             agora = datetime.now()
-            momento_inicio = agora - timedelta(hours=2) 
+            momento_fim = agora - timedelta(hours=2)
+            momento_inicio = momento_fim - timedelta(minutes=15)
             data_inicio = momento_inicio.strftime("%d.%m.%Y")
             hora_inicio = momento_inicio.strftime("%H:%M")
-            data_fim = agora.strftime("%d.%m.%Y")
-            hora_fim = agora.strftime("%H:%M")
+            data_fim = momento_fim.strftime("%d.%m.%Y")
+            hora_fim = momento_fim.strftime("%H:%M")
 
             self.open_tcode("IW41")
             if ordem and ordem_id:
