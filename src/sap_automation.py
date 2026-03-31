@@ -495,11 +495,6 @@ class SapAutomation:
             return False
 
     def _run_iw41_flow(self, parameters: dict, evidence_path: str = "", mode: str = "real") -> SapResult:
-        """Fluxo IW41 (Multi-Linhas e Linha Única):
-        - Entra na ordem.
-        - Se o SAP pular a tabela (1 operação), preenche direto e salva.
-        - Se o SAP mostrar a tabela (várias), faz o loop de duplo clique.
-        """
         try:
             is_real_mode = self._is_real_mode(mode)
             
@@ -507,7 +502,6 @@ class SapAutomation:
             mapping_norm = {self._norm_key(k): v for k, v in mapping.items()}
 
             ordem_id = mapping.get("Ordem") or mapping_norm.get(self._norm_key("Ordem"))
-            
             ordem = self._get_param_value(parameters, "Ordem")
             pernr = self._get_param_value(parameters, "Nº pessoal", "N* pessoal", "N pessoal", "Numero pessoal")
 
@@ -531,6 +525,9 @@ class SapAutomation:
 
             table_id = "wnd[0]/usr/tblSAPLCORUTC_3100"
             
+            # ==========================================================
+            # CENÁRIO 1: ACESSO DIRETO (APENAS 1 OPERAÇÃO)
+            # ==========================================================
             if not self._table_exists(table_id):
                 try:
                     self.session.findById("wnd[0]/usr/ctxtAFRUD-PERNR") 
@@ -554,12 +551,69 @@ class SapAutomation:
 
                     self._safe_press_save(mode=mode)
                     
+                    # --- BLINDAGEM DA TELA DE LOG E CAPTURA DE MENSAGEM EXATA ---
                     sb_type = self._statusbar_type()
-                    sb = self._statusbar_text()
-                    
-                    if is_real_mode and sb_type in {"E", "A", "X"}:
-                        ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                        return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar a IW41.", ev)
+                    sb = self._statusbar_text() or ""
+                    titulo_tela = ""
+                    try: titulo_tela = self.session.findById("wnd[0]").text
+                    except: pass
+
+                    if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
+                        ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
+                        msg_exata = ""
+                        try:
+                            def varrer_tudo(obj):
+                                textos = []
+                                try:
+                                    t = str(getattr(obj, "text", "")).strip()
+                                    if t: textos.append(t)
+                                except: pass
+
+                                tipo = getattr(obj, "type", "")
+                                if tipo == "GuiTableControl":
+                                    try:
+                                        for col in getattr(obj, "Columns", []):
+                                            for r in range(getattr(obj, "RowCount", 0)):
+                                                try:
+                                                    v = str(col[r].text).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
+                                    except: pass
+                                elif tipo == "GuiShell":
+                                    try:
+                                        for r in range(getattr(obj, "RowCount", 0)):
+                                            for c in getattr(obj, "ColumnOrder", []):
+                                                try:
+                                                    v = str(obj.GetCellValue(r, c)).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
+                                    except: pass
+
+                                try:
+                                    for child in getattr(obj, "Children", []):
+                                        textos.extend(varrer_tudo(child))
+                                except: pass
+                                return textos
+
+                            todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                            for t in todos_textos:
+                                if "HHMANU" in t or "atividade interna" in t.lower():
+                                    msg_exata = t
+                                    break
+                        except: pass
+
+                        msg_erro = msg_exata if msg_exata else "HHMANU_FALHA: Nao leu a tabela."
+
+                        try:
+                            self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
+                            time.sleep(0.5)
+                            if self._popup_exists():
+                                self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                                time.sleep(0.5)
+                        except: pass
+                        
+                        return SapResult("FAIL", "STATUSBAR", msg_erro, ev)
+                    # ------------------------------------------------------------
                     
                     ev = self._capture_success_evidence(evidence_path)
                     modo_txt = "REAL" if is_real_mode else "SIMULADO"
@@ -568,18 +622,19 @@ class SapAutomation:
                 except Exception:
                     return SapResult("FAIL", "NOT_FOUND", "Tabela não encontrada e acesso direto falhou na IW41.", self._capture_error_evidence(evidence_path, "TABLE_MISSING"))
 
+            # ==========================================================
+            # CENÁRIO 2: MÚLTIPLAS OPERAÇÕES (TABELA)
+            # ==========================================================
             table = self.session.findById(table_id)
             max_rows = int(getattr(table, "RowCount", 50))
             processed = 0
 
             for row_idx in range(max_rows):
-                try:
-                    table.VerticalScrollbar.Position = row_idx
+                try: table.VerticalScrollbar.Position = row_idx
                 except: pass
 
                 visible_row = row_idx
-                try:
-                    visible_row = row_idx - int(table.VerticalScrollbar.Position)
+                try: visible_row = row_idx - int(table.VerticalScrollbar.Position)
                 except: pass
 
                 try:
@@ -612,7 +667,7 @@ class SapAutomation:
                 self._set_checkbox_if_exists(conf_final_id, False)
                 self._set_checkbox_if_exists(baixa_res_id, False)
 
-                self.session.findById("wnd[0]").sendVKey(0) # Enter
+                self.session.findById("wnd[0]").sendVKey(0) 
                 time.sleep(0.5)
 
                 if self._popup_exists():
@@ -627,12 +682,69 @@ class SapAutomation:
             if processed > 0:
                 self._safe_press_save(mode=mode)
                 
+                # --- BLINDAGEM DA TELA DE LOG E CAPTURA DE MENSAGEM EXATA ---
                 sb_type = self._statusbar_type()
-                sb = self._statusbar_text()
-                
-                if is_real_mode and sb_type in {"E", "A", "X"}:
-                    ev = self._capture_error_evidence(evidence_path, "STATUSBAR")
-                    return SapResult("FAIL", "STATUSBAR", sb or "Erro SAP ao gravar a IW41.", ev)
+                sb = self._statusbar_text() or ""
+                titulo_tela = ""
+                try: titulo_tela = self.session.findById("wnd[0]").text
+                except: pass
+
+                if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
+                    ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
+                    msg_exata = ""
+                    try:
+                        def varrer_tudo(obj):
+                            textos = []
+                            try:
+                                t = str(getattr(obj, "text", "")).strip()
+                                if t: textos.append(t)
+                            except: pass
+
+                            tipo = getattr(obj, "type", "")
+                            if tipo == "GuiTableControl":
+                                try:
+                                    for col in getattr(obj, "Columns", []):
+                                        for r in range(getattr(obj, "RowCount", 0)):
+                                            try:
+                                                v = str(col[r].text).strip()
+                                                if v: textos.append(v)
+                                            except: pass
+                                except: pass
+                            elif tipo == "GuiShell":
+                                try:
+                                    for r in range(getattr(obj, "RowCount", 0)):
+                                        for c in getattr(obj, "ColumnOrder", []):
+                                            try:
+                                                v = str(obj.GetCellValue(r, c)).strip()
+                                                if v: textos.append(v)
+                                            except: pass
+                                except: pass
+
+                            try:
+                                for child in getattr(obj, "Children", []):
+                                    textos.extend(varrer_tudo(child))
+                            except: pass
+                            return textos
+
+                        todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                        for t in todos_textos:
+                            if "HHMANU" in t or "atividade interna" in t.lower():
+                                msg_exata = t
+                                break
+                    except: pass
+
+                    msg_erro = msg_exata if msg_exata else "HHMANU_FALHA: Nao leu a tabela."
+
+                    try:
+                        self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
+                        time.sleep(0.5)
+                        if self._popup_exists():
+                            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                            time.sleep(0.5)
+                    except: pass
+                    
+                    return SapResult("FAIL", "STATUSBAR", msg_erro, ev)
+                # ------------------------------------------------------------
                 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
