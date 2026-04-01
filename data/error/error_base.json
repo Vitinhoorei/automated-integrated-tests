@@ -82,6 +82,10 @@
     "campo_sugerido": "Unidade de medida",
     "usar_regra_dinamica": null,
     "valor_padrao": "UM",
-    "justificativa": "Padrão fixo para ordens de PP."
+    "justificativa": "Unidade de medida não informada na planilha. Assumido padrão 'UM'."
+
   }
 }
+
+
+  

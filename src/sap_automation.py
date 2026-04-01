@@ -1265,6 +1265,25 @@ class SapAutomation:
         return SapResult("PASS", "OK", f"CO11N concluída. {processed} operação(ões) apontada(s) e salvas com sucesso. ({modo_txt})", ev)
     
     def _run_pp_co07_flow(self, parameters, evidence_path, mode):
+        try:
+            with open("data/error/error_base.json", "r", encoding="utf-8") as f_erros:
+                regras_locais = json.load(f_erros)
+        except Exception:
+            regras_locais = {}
+
+        for erro_nome, regra in regras_locais.items():
+            if len(erro_nome) == 32: continue 
+
+            tcodes_permitidos = regra.get("tcodes", [])
+            if "CO07" in tcodes_permitidos:
+                campo = regra.get("campo_sugerido")
+                
+                if campo:
+                    campo_vazio = campo not in parameters or str(parameters.get(campo, "")).strip() == ""
+                    if campo_vazio:
+                        ev = self._capture_error_evidence(evidence_path, "BUSINESS_RULE")
+                        return SapResult("FAIL", "STATUSBAR", f"Falta preencher o campo '{campo}'", ev)
+
         self.open_tcode("CO07")
         self.apply_parameters_dict("CO07", parameters)
         self.session.findById("wnd[0]").sendVKey(0)
