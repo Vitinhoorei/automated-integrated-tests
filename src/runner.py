@@ -66,14 +66,35 @@ def run_excel_tests(
             print(f"[SKIP] Aba '{sname}' ignorada: {e}")
 
     valid_modes = {"executar", "simulado"}
+    current_scenario = None
+    skip_scenario = False
 
     for item in rows:
         mode = (item.mode or "").strip().lower()
 
         if mode not in valid_modes:
-            print(
-                f"[{item.sheet_name} r{item.row_index}] "
-                f"{item.tcode} -> SKIP | modo vazio ou inválido: '{item.mode}'"
+            print(f"[{item.sheet_name} r{item.row_index}] {item.tcode} -> SKIP | modo vazio ou inválido: '{item.mode}'")
+            continue
+
+        if item.scenario != current_scenario:
+            current_scenario = item.scenario
+            skip_scenario = False          
+            ai.shared_context.clear()      
+            print(f"\n{'='*50}\n🚀 INICIANDO NOVO CENÁRIO: {current_scenario}\n{'='*50}")
+
+        if skip_scenario:
+            print(f"[{item.sheet_name} r{item.row_index}] {item.tcode} -> SKIP em Cascata (Dependência falhou)")
+            write_status_with_fix_details(
+                xlsx_path=work_xlsx,
+                sheet_name=item.sheet_name,
+                row_index=item.row_index,
+                status="SKIP",
+                source="ORQUESTRADOR",
+                message=f"Ignorado pois uma transação anterior do cenário {current_scenario} falhou.",
+                suggested_fix="-",
+                fix_confidence=0,
+                fix_justification="Cascade Skip automático.",
+                evidence_path="",
             )
             continue
 
@@ -134,6 +155,7 @@ def run_excel_tests(
                 if match:
                     id_gerado = match.group(1)
                     ai.shared_context["UltimoID"] = id_gerado
+                    ai.shared_context[f"ID_{item.tcode.upper()}"] = id_gerado
                     
                     if "nota" in result.message.lower() or "aviso" in result.message.lower():
                         ai.shared_context["Nota"] = id_gerado
@@ -162,7 +184,6 @@ def run_excel_tests(
 
                 break
 
-            # FAIL
             dump_path = ""
 
             if sap.session:
@@ -231,6 +252,8 @@ def run_excel_tests(
                 f"{item.tcode} ({mode}) -> FAIL | {causa} | "
                 f"Sugestão: {sugestao} | Confiança: {confianca}"
             )
+            
+            skip_scenario = True 
 
             if sap.session:
                 try:
