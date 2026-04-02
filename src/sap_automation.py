@@ -525,6 +525,9 @@ class SapAutomation:
 
             table_id = "wnd[0]/usr/tblSAPLCORUTC_3100"
             
+            # ==========================================================
+            # CENÁRIO 1: ACESSO DIRETO (APENAS 1 OPERAÇÃO)
+            # ==========================================================
             if not self._table_exists(table_id):
                 try:
                     self.session.findById("wnd[0]/usr/ctxtAFRUD-PERNR") 
@@ -551,6 +554,7 @@ class SapAutomation:
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text() or ""
                     
+                    # BYPASS DO CALENDÁRIO (MÉXICO) AQUI
                     if "dia útil" in sb.lower() or "calendário" in sb.lower():
                         try:
                             self.session.findById("wnd[0]").sendVKey(0)
@@ -560,58 +564,57 @@ class SapAutomation:
                         except: pass
 
                     titulo_tela = ""
-                    try: titulo_tela = self.session.findById("wnd[0]").text
+                    try: titulo_tela = str(self.session.findById("wnd[0]").text).strip()
                     except: pass
 
-                    if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
+                    # A MÁGICA FINAL: Tem "Confirmação" mas NÃO tem "Criar" (ignora a tela inicial de sucesso)
+                    condicao_tela_erro = "Confirmação" in titulo_tela and "Criar" not in titulo_tela
+
+                    if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or condicao_tela_erro):
                         ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
-                        msg_erro = sb 
+                        msg_exata = ""
+                        try:
+                            def varrer_tudo(obj):
+                                textos = []
+                                try:
+                                    t = str(getattr(obj, "text", "")).strip()
+                                    if t: textos.append(t)
+                                except: pass
 
-                        if "Confirmação" in titulo_tela or not msg_erro:
-                            msg_exata = ""
-                            try:
-                                def varrer_tudo(obj):
-                                    textos = []
+                                tipo = getattr(obj, "type", "")
+                                if tipo == "GuiTableControl":
                                     try:
-                                        t = str(getattr(obj, "text", "")).strip()
-                                        if t: textos.append(t)
-                                    except: pass
-                                    tipo = getattr(obj, "type", "")
-                                    if tipo == "GuiTableControl":
-                                        try:
-                                            for col in getattr(obj, "Columns", []):
-                                                for r in range(getattr(obj, "RowCount", 0)):
-                                                    try:
-                                                        v = str(col[r].text).strip()
-                                                        if v: textos.append(v)
-                                                    except: pass
-                                        except: pass
-                                    elif tipo == "GuiShell":
-                                        try:
+                                        for col in getattr(obj, "Columns", []):
                                             for r in range(getattr(obj, "RowCount", 0)):
-                                                for c in getattr(obj, "ColumnOrder", []):
-                                                    try:
-                                                        v = str(obj.GetCellValue(r, c)).strip()
-                                                        if v: textos.append(v)
-                                                    except: pass
-                                        except: pass
-                                    try:
-                                        for child in getattr(obj, "Children", []):
-                                            textos.extend(varrer_tudo(child))
+                                                try:
+                                                    v = str(col[r].text).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
                                     except: pass
-                                    return textos
+                                elif tipo == "GuiShell":
+                                    try:
+                                        for r in range(getattr(obj, "RowCount", 0)):
+                                            for c in getattr(obj, "ColumnOrder", []):
+                                                try:
+                                                    v = str(obj.GetCellValue(r, c)).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
+                                    except: pass
 
-                                todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
-                                for t in todos_textos:
-                                    if "atividade interna" in t.lower() or "preço" in t.lower():
-                                        msg_exata = t
-                                        break
-                            except: pass
+                                try:
+                                    for child in getattr(obj, "Children", []):
+                                        textos.extend(varrer_tudo(child))
+                                except: pass
+                                return textos
 
-                            if msg_exata:
-                                msg_erro = msg_exata
-                            elif not msg_erro:
-                                msg_erro = "Erro ao gravar apontamento na IW41."
+                            todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                            for t in todos_textos:
+                                if "HHMANU" in t or "atividade interna" in t.lower():
+                                    msg_exata = t
+                                    break
+                        except: pass
+
+                        msg_erro = msg_exata if msg_exata else (sb if sb else "HHMANU_FALHA: Nao leu a tabela.")
 
                         try:
                             self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
@@ -625,11 +628,14 @@ class SapAutomation:
                     
                     ev = self._capture_success_evidence(evidence_path)
                     modo_txt = "REAL" if is_real_mode else "SIMULADO"
-                    return SapResult("PASS", "OK", f"IW41 executada em 1 operação (Acesso Direto) e salva com sucesso. ({modo_txt})", ev)
+                    return SapResult("PASS", "OK", sb if sb else f"IW41 executada em 1 operação (Acesso Direto) e salva com sucesso. ({modo_txt})", ev)
 
                 except Exception:
                     return SapResult("FAIL", "NOT_FOUND", "Tabela não encontrada e acesso direto falhou na IW41.", self._capture_error_evidence(evidence_path, "TABLE_MISSING"))
 
+            # ==========================================================
+            # CENÁRIO 2: MÚLTIPLAS OPERAÇÕES (TABELA)
+            # ==========================================================
             table = self.session.findById(table_id)
             max_rows = int(getattr(table, "RowCount", 50))
             processed = 0
@@ -675,6 +681,14 @@ class SapAutomation:
                 self.session.findById("wnd[0]").sendVKey(0) 
                 time.sleep(0.5)
 
+                # BYPASS DO CALENDÁRIO DENTRO DA OPERAÇÃO
+                sb_detalhe = self._statusbar_text() or ""
+                if "dia útil" in sb_detalhe.lower() or "calendário" in sb_detalhe.lower():
+                    try:
+                        self.session.findById("wnd[0]").sendVKey(0)
+                        time.sleep(0.5)
+                    except: pass
+
                 if self._popup_exists():
                     self.session.findById("wnd[1]").sendVKey(0)
                     time.sleep(0.5)
@@ -684,73 +698,76 @@ class SapAutomation:
                 
                 processed += 1
 
+            # ==========================================================
+            # SALVAR E VALIDAR
+            # ==========================================================
             if processed > 0:
                 self._safe_press_save(mode=mode)
                 
                 sb_type = self._statusbar_type()
                 sb = self._statusbar_text() or ""
                 
+                # BYPASS DO CALENDÁRIO NO SAVE FINAL
                 if "dia útil" in sb.lower() or "calendário" in sb.lower():
                     try:
-                        self.session.findById("wnd[0]").sendVKey(0) 
+                        self.session.findById("wnd[0]").sendVKey(0)
                         time.sleep(1.0)
                         sb_type = self._statusbar_type()
                         sb = self._statusbar_text() or ""
                     except: pass
-
+                
                 titulo_tela = ""
-                try: titulo_tela = self.session.findById("wnd[0]").text
+                try: titulo_tela = str(self.session.findById("wnd[0]").text).strip()
                 except: pass
 
-                if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
+                # A MÁGICA FINAL: Tem "Confirmação" mas NÃO tem "Criar" (ignora a tela inicial de sucesso)
+                condicao_tela_erro = "Confirmação" in titulo_tela and "Criar" not in titulo_tela
+
+                if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or condicao_tela_erro):
                     ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
-                    msg_erro = sb 
+                    msg_exata = ""
+                    try:
+                        def varrer_tudo(obj):
+                            textos = []
+                            try:
+                                t = str(getattr(obj, "text", "")).strip()
+                                if t: textos.append(t)
+                            except: pass
 
-                    if "Confirmação" in titulo_tela or not msg_erro:
-                        msg_exata = ""
-                        try:
-                            def varrer_tudo(obj):
-                                textos = []
+                            tipo = getattr(obj, "type", "")
+                            if tipo == "GuiTableControl":
                                 try:
-                                    t = str(getattr(obj, "text", "")).strip()
-                                    if t: textos.append(t)
-                                except: pass
-                                tipo = getattr(obj, "type", "")
-                                if tipo == "GuiTableControl":
-                                    try:
-                                        for col in getattr(obj, "Columns", []):
-                                            for r in range(getattr(obj, "RowCount", 0)):
-                                                try:
-                                                    v = str(col[r].text).strip()
-                                                    if v: textos.append(v)
-                                                except: pass
-                                    except: pass
-                                elif tipo == "GuiShell":
-                                    try:
+                                    for col in getattr(obj, "Columns", []):
                                         for r in range(getattr(obj, "RowCount", 0)):
-                                            for c in getattr(obj, "ColumnOrder", []):
-                                                try:
-                                                    v = str(obj.GetCellValue(r, c)).strip()
-                                                    if v: textos.append(v)
-                                                except: pass
-                                    except: pass
-                                try:
-                                    for child in getattr(obj, "Children", []):
-                                        textos.extend(varrer_tudo(child))
+                                            try:
+                                                v = str(col[r].text).strip()
+                                                if v: textos.append(v)
+                                            except: pass
                                 except: pass
-                                return textos
+                            elif tipo == "GuiShell":
+                                try:
+                                    for r in range(getattr(obj, "RowCount", 0)):
+                                        for c in getattr(obj, "ColumnOrder", []):
+                                            try:
+                                                v = str(obj.GetCellValue(r, c)).strip()
+                                                if v: textos.append(v)
+                                            except: pass
+                                except: pass
 
-                            todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
-                            for t in todos_textos:
-                                if "atividade interna" in t.lower() or "preço" in t.lower():
-                                    msg_exata = t
-                                    break
-                        except: pass
+                            try:
+                                for child in getattr(obj, "Children", []):
+                                    textos.extend(varrer_tudo(child))
+                            except: pass
+                            return textos
 
-                        if msg_exata:
-                            msg_erro = msg_exata
-                        elif not msg_erro:
-                            msg_erro = "Erro ao gravar apontamento na IW41."
+                        todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                        for t in todos_textos:
+                            if "HHMANU" in t or "atividade interna" in t.lower():
+                                msg_exata = t
+                                break
+                    except: pass
+
+                    msg_erro = msg_exata if msg_exata else (sb if sb else "HHMANU_FALHA: Nao leu a tabela.")
 
                     try:
                         self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
@@ -764,7 +781,7 @@ class SapAutomation:
                 
                 ev = self._capture_success_evidence(evidence_path)
                 modo_txt = "REAL" if is_real_mode else "SIMULADO"
-                return SapResult("PASS", "OK", f"IW41 executada em {processed} operação(ões) e salva com sucesso. ({modo_txt})", ev)
+                return SapResult("PASS", "OK", sb if sb else f"IW41 executada em {processed} operação(ões) e salva com sucesso. ({modo_txt})", ev)
             else:
                 return SapResult("FAIL", "NO_DATA", "Nenhuma operação válida encontrada para apontar.", self._capture_error_evidence(evidence_path, "NO_DATA"))
 
