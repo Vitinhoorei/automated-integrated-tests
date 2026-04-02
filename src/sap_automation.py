@@ -550,55 +550,68 @@ class SapAutomation:
                     
                     sb_type = self._statusbar_type()
                     sb = self._statusbar_text() or ""
+                    
+                    if "dia útil" in sb.lower() or "calendário" in sb.lower():
+                        try:
+                            self.session.findById("wnd[0]").sendVKey(0)
+                            time.sleep(1.0)
+                            sb_type = self._statusbar_type()
+                            sb = self._statusbar_text() or ""
+                        except: pass
+
                     titulo_tela = ""
                     try: titulo_tela = self.session.findById("wnd[0]").text
                     except: pass
 
                     if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
                         ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
-                        msg_exata = ""
-                        try:
-                            def varrer_tudo(obj):
-                                textos = []
-                                try:
-                                    t = str(getattr(obj, "text", "")).strip()
-                                    if t: textos.append(t)
-                                except: pass
+                        msg_erro = sb 
 
-                                tipo = getattr(obj, "type", "")
-                                if tipo == "GuiTableControl":
+                        if "Confirmação" in titulo_tela or not msg_erro:
+                            msg_exata = ""
+                            try:
+                                def varrer_tudo(obj):
+                                    textos = []
                                     try:
-                                        for col in getattr(obj, "Columns", []):
+                                        t = str(getattr(obj, "text", "")).strip()
+                                        if t: textos.append(t)
+                                    except: pass
+                                    tipo = getattr(obj, "type", "")
+                                    if tipo == "GuiTableControl":
+                                        try:
+                                            for col in getattr(obj, "Columns", []):
+                                                for r in range(getattr(obj, "RowCount", 0)):
+                                                    try:
+                                                        v = str(col[r].text).strip()
+                                                        if v: textos.append(v)
+                                                    except: pass
+                                        except: pass
+                                    elif tipo == "GuiShell":
+                                        try:
                                             for r in range(getattr(obj, "RowCount", 0)):
-                                                try:
-                                                    v = str(col[r].text).strip()
-                                                    if v: textos.append(v)
-                                                except: pass
-                                    except: pass
-                                elif tipo == "GuiShell":
+                                                for c in getattr(obj, "ColumnOrder", []):
+                                                    try:
+                                                        v = str(obj.GetCellValue(r, c)).strip()
+                                                        if v: textos.append(v)
+                                                    except: pass
+                                        except: pass
                                     try:
-                                        for r in range(getattr(obj, "RowCount", 0)):
-                                            for c in getattr(obj, "ColumnOrder", []):
-                                                try:
-                                                    v = str(obj.GetCellValue(r, c)).strip()
-                                                    if v: textos.append(v)
-                                                except: pass
+                                        for child in getattr(obj, "Children", []):
+                                            textos.extend(varrer_tudo(child))
                                     except: pass
+                                    return textos
 
-                                try:
-                                    for child in getattr(obj, "Children", []):
-                                        textos.extend(varrer_tudo(child))
-                                except: pass
-                                return textos
+                                todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                                for t in todos_textos:
+                                    if "atividade interna" in t.lower() or "preço" in t.lower():
+                                        msg_exata = t
+                                        break
+                            except: pass
 
-                            todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
-                            for t in todos_textos:
-                                if "HHMANU" in t or "atividade interna" in t.lower():
-                                    msg_exata = t
-                                    break
-                        except: pass
-
-                        msg_erro = msg_exata if msg_exata else "HHMANU_FALHA: Nao leu a tabela."
+                            if msg_exata:
+                                msg_erro = msg_exata
+                            elif not msg_erro:
+                                msg_erro = "Erro ao gravar apontamento na IW41."
 
                         try:
                             self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
@@ -676,55 +689,68 @@ class SapAutomation:
                 
                 sb_type = self._statusbar_type()
                 sb = self._statusbar_text() or ""
+                
+                if "dia útil" in sb.lower() or "calendário" in sb.lower():
+                    try:
+                        self.session.findById("wnd[0]").sendVKey(0) 
+                        time.sleep(1.0)
+                        sb_type = self._statusbar_type()
+                        sb = self._statusbar_text() or ""
+                    except: pass
+
                 titulo_tela = ""
                 try: titulo_tela = self.session.findById("wnd[0]").text
                 except: pass
 
                 if is_real_mode and (sb_type in {"E", "A", "X"} or "erro" in sb.lower() or "Confirmação" in titulo_tela):
                     ev = self._capture_error_evidence(evidence_path, "LOG_ERRO")
-                    msg_exata = ""
-                    try:
-                        def varrer_tudo(obj):
-                            textos = []
-                            try:
-                                t = str(getattr(obj, "text", "")).strip()
-                                if t: textos.append(t)
-                            except: pass
+                    msg_erro = sb 
 
-                            tipo = getattr(obj, "type", "")
-                            if tipo == "GuiTableControl":
+                    if "Confirmação" in titulo_tela or not msg_erro:
+                        msg_exata = ""
+                        try:
+                            def varrer_tudo(obj):
+                                textos = []
                                 try:
-                                    for col in getattr(obj, "Columns", []):
+                                    t = str(getattr(obj, "text", "")).strip()
+                                    if t: textos.append(t)
+                                except: pass
+                                tipo = getattr(obj, "type", "")
+                                if tipo == "GuiTableControl":
+                                    try:
+                                        for col in getattr(obj, "Columns", []):
+                                            for r in range(getattr(obj, "RowCount", 0)):
+                                                try:
+                                                    v = str(col[r].text).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
+                                    except: pass
+                                elif tipo == "GuiShell":
+                                    try:
                                         for r in range(getattr(obj, "RowCount", 0)):
-                                            try:
-                                                v = str(col[r].text).strip()
-                                                if v: textos.append(v)
-                                            except: pass
-                                except: pass
-                            elif tipo == "GuiShell":
+                                            for c in getattr(obj, "ColumnOrder", []):
+                                                try:
+                                                    v = str(obj.GetCellValue(r, c)).strip()
+                                                    if v: textos.append(v)
+                                                except: pass
+                                    except: pass
                                 try:
-                                    for r in range(getattr(obj, "RowCount", 0)):
-                                        for c in getattr(obj, "ColumnOrder", []):
-                                            try:
-                                                v = str(obj.GetCellValue(r, c)).strip()
-                                                if v: textos.append(v)
-                                            except: pass
+                                    for child in getattr(obj, "Children", []):
+                                        textos.extend(varrer_tudo(child))
                                 except: pass
+                                return textos
 
-                            try:
-                                for child in getattr(obj, "Children", []):
-                                    textos.extend(varrer_tudo(child))
-                            except: pass
-                            return textos
+                            todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
+                            for t in todos_textos:
+                                if "atividade interna" in t.lower() or "preço" in t.lower():
+                                    msg_exata = t
+                                    break
+                        except: pass
 
-                        todos_textos = varrer_tudo(self.session.findById("wnd[0]"))
-                        for t in todos_textos:
-                            if "HHMANU" in t or "atividade interna" in t.lower():
-                                msg_exata = t
-                                break
-                    except: pass
-
-                    msg_erro = msg_exata if msg_exata else "HHMANU_FALHA: Nao leu a tabela."
+                        if msg_exata:
+                            msg_erro = msg_exata
+                        elif not msg_erro:
+                            msg_erro = "Erro ao gravar apontamento na IW41."
 
                     try:
                         self.session.findById("wnd[0]/tbar[0]/btn[3]").press()
